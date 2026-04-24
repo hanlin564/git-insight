@@ -4,6 +4,7 @@ import {formatNumber} from '../../utils/number.js';
 import {padEndSafe} from '../../utils/text.js';
 
 export type BarChartItem = {
+	key?: string;
 	label: string;
 	value: number;
 };
@@ -26,7 +27,7 @@ export function BarChart({items, width = 24, color = 'green', emptyText = 'æš‚æ—
 	return (
 		<Box flexDirection="column">
 			{items.map(item => (
-				<Text key={item.label}>
+				<Text key={item.key ?? item.label}>
 					{padEndSafe(item.label, labelWidth)}{' '}
 					<Text color={color}>{getBar(item.value, max, width)}</Text>{' '}
 					{formatNumber(item.value)}

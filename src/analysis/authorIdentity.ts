@@ -125,7 +125,13 @@ function collectNamesByPrimaryEmail(
 }
 
 function getAuthorKey(authorName: string, authorEmail: string): string {
-	return `${authorName}<${authorEmail}>`;
+	const email = normalizeEmail(authorEmail);
+
+	if (email) {
+		return email;
+	}
+
+	return normalizeText(authorName);
 }
 
 function normalizeEmail(email: string): string {

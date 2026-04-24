@@ -13,6 +13,7 @@ export function AuthorRanking({stats}: AuthorRankingProps) {
 		<Box flexDirection="column">
 			<Section title="Author Ranking by Commits">
 				<BarChart items={stats.topByCommits.map(author => ({
+					key: author.authorEmail,
 					label: author.authorName,
 					value: author.commitCount
 				}))} />
@@ -20,6 +21,7 @@ export function AuthorRanking({stats}: AuthorRankingProps) {
 
 			<Section title="Author Ranking by Changed Lines">
 				<BarChart items={stats.topByChangedLines.map(author => ({
+					key: author.authorEmail,
 					label: author.authorName,
 					value: author.changedLines
 				}))} />
