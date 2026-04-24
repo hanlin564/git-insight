@@ -4,9 +4,20 @@ import {addDays, formatDate, getDaysBetween, startOfLocalDay, type DateRange} fr
 
 const MAX_SINCE_DAYS = 3650;
 
+export type RangeRequest =
+	| {kind: 'fixed'; range: DateRange}
+	| {kind: 'custom'; from?: DateInput; to?: DateInput};
+
+export type DateInput = {
+	raw: string;
+	precision: 'year' | 'month' | 'day';
+	startDate: string;
+	endDate: string;
+};
+
 export type CliOptions = {
 	repo: string;
-	range: DateRange;
+	rangeRequest: RangeRequest;
 	branch?: string;
 	author?: string;
 	me: boolean;
@@ -42,64 +53,163 @@ const parseSinceRange = (value: string): DateRange => {
 };
 
 const parseYearRange = (value: string): DateRange => {
-	if (!/^\d{4}$/.test(value)) {
+	const input = parseDateInput(value, '--year');
+	if (input.precision !== 'year') {
 		throw new Error('--year 必须是 yyyy 格式。');
 	}
 
-	const startDate = `${value}-01-01`;
-	const endDate = `${value}-12-31`;
+	const {startDate, endDate} = input;
 
 	return {
 		kind: 'year',
 		startDate,
 		endDate,
-		label: value,
+		label: input.raw,
 		dayCount: getDaysBetween(startDate, endDate) + 1
 	};
 };
 
 const parseMonthRange = (value: string): DateRange => {
-	const match = /^(\d{4})-(\d{2})$/.exec(value);
-	if (!match) {
+	const input = parseDateInput(value, '--month');
+	if (input.precision !== 'month') {
 		throw new Error('--month 必须是 yyyy-MM 格式。');
 	}
 
-	const [, year, month] = match;
-	const monthNumber = Number.parseInt(month ?? '', 10);
-	if (monthNumber < 1 || monthNumber > 12) {
-		throw new Error('--month 的月份必须在 01 到 12 之间。');
-	}
-
-	const start = new Date(Number.parseInt(year ?? '', 10), monthNumber - 1, 1);
-	const end = new Date(Number.parseInt(year ?? '', 10), monthNumber, 0);
-	const startDate = formatDate(start);
-	const endDate = formatDate(end);
+	const {startDate, endDate} = input;
 
 	return {
 		kind: 'month',
 		startDate,
 		endDate,
-		label: `${year}-${month}`,
+		label: input.raw,
 		dayCount: getDaysBetween(startDate, endDate) + 1
 	};
 };
 
-const parseRange = (values: {since?: string; year?: string; month?: string}): DateRange => {
-	const selected = [values.since, values.year, values.month].filter(value => value !== undefined);
-	if (selected.length > 1) {
+const parseRangeRequest = (values: {
+	since?: string;
+	year?: string;
+	month?: string;
+	from?: string;
+	to?: string;
+}): RangeRequest => {
+	const fixedValues = [values.since, values.year, values.month].filter(value => value !== undefined);
+	const hasCustomRange = values.from !== undefined || values.to !== undefined;
+
+	if (fixedValues.length > 1) {
 		throw new Error('--since、--year、--month 只能指定一个。');
 	}
 
+	if (hasCustomRange && fixedValues.length > 0) {
+		throw new Error('--from/--to 不能和 --since、--year、--month 同时使用。');
+	}
+
+	if (hasCustomRange) {
+		const from = values.from === undefined ? undefined : parseDateInput(String(values.from), '--from');
+		const to = values.to === undefined ? undefined : parseDateInput(String(values.to), '--to');
+
+		if (from && to && from.precision !== to.precision) {
+			throw new Error('--from 和 --to 同时使用时必须采用相同格式。');
+		}
+
+		return {kind: 'custom', from, to};
+	}
+
 	if (values.year !== undefined) {
-		return parseYearRange(String(values.year));
+		return {kind: 'fixed', range: parseYearRange(String(values.year))};
 	}
 
 	if (values.month !== undefined) {
-		return parseMonthRange(String(values.month));
+		return {kind: 'fixed', range: parseMonthRange(String(values.month))};
 	}
 
-	return parseSinceRange(String(values.since ?? '365'));
+	return {kind: 'fixed', range: parseSinceRange(String(values.since ?? '365'))};
 };
+
+export function createCustomDateRange(request: Extract<RangeRequest, {kind: 'custom'}>, fallbackStartDate?: string): DateRange {
+	const startDate = request.from?.startDate ?? fallbackStartDate;
+	const endDate = request.to?.endDate ?? formatDate(startOfLocalDay(new Date()));
+
+	if (!startDate) {
+		return {
+			kind: 'custom',
+			startDate: endDate,
+			endDate,
+			label: getCustomRangeLabel(request),
+			dayCount: 0
+		};
+	}
+
+	const dayCount = getDaysBetween(startDate, endDate) + 1;
+	if (dayCount <= 0) {
+		throw new Error('--from 不能晚于 --to。');
+	}
+
+	if (dayCount > MAX_SINCE_DAYS) {
+		throw new Error(`时间范围最大支持 ${MAX_SINCE_DAYS} 天。`);
+	}
+
+	return {
+		kind: 'custom',
+		startDate,
+		endDate,
+		label: getCustomRangeLabel(request),
+		dayCount
+	};
+}
+
+function parseDateInput(value: string, optionName: string): DateInput {
+	if (/^\d{4}$/.test(value)) {
+		return {
+			raw: value,
+			precision: 'year',
+			startDate: `${value}-01-01`,
+			endDate: `${value}-12-31`
+		};
+	}
+
+	const monthMatch = /^(\d{4})-(\d{2})$/.exec(value);
+	if (monthMatch) {
+		const year = Number.parseInt(monthMatch[1] ?? '', 10);
+		const month = Number.parseInt(monthMatch[2] ?? '', 10);
+		if (month < 1 || month > 12) {
+			throw new Error(`${optionName} 的月份必须在 01 到 12 之间。`);
+		}
+
+		return {
+			raw: value,
+			precision: 'month',
+			startDate: formatDate(new Date(year, month - 1, 1)),
+			endDate: formatDate(new Date(year, month, 0))
+		};
+	}
+
+	const dayMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+	if (dayMatch) {
+		const year = Number.parseInt(dayMatch[1] ?? '', 10);
+		const month = Number.parseInt(dayMatch[2] ?? '', 10);
+		const day = Number.parseInt(dayMatch[3] ?? '', 10);
+		const date = new Date(year, month - 1, day);
+		const formatted = formatDate(date);
+
+		if (formatted !== value) {
+			throw new Error(`${optionName} 必须是存在的日期。`);
+		}
+
+		return {
+			raw: value,
+			precision: 'day',
+			startDate: formatted,
+			endDate: formatted
+		};
+	}
+
+	throw new Error(`${optionName} 必须是 yyyy、yyyy-MM 或 yyyy-MM-dd 格式。`);
+}
+
+function getCustomRangeLabel(request: Extract<RangeRequest, {kind: 'custom'}>): string {
+	return `${request.from?.raw ?? 'first commit'}..${request.to?.raw ?? 'now'}`;
+}
 
 export function parseArgs(argv = process.argv): CliOptions {
 	const program = new Command();
@@ -110,6 +220,8 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--since <days>', '统计最近 N 天数据，默认 365')
 		.option('--year <yyyy>', '统计指定年份数据')
 		.option('--month <yyyy-MM>', '统计指定月份数据')
+		.option('--from <date>', '统计起始时间，支持 yyyy、yyyy-MM、yyyy-MM-dd')
+		.option('--to <date>', '统计结束时间，支持 yyyy、yyyy-MM、yyyy-MM-dd')
 		.option('--branch <name>', '指定分析分支，默认当前分支')
 		.option('--repo <path>', 'Git 仓库目录', process.cwd())
 		.option('--author <query>', '只展示匹配作者名称或邮箱的数据')
@@ -125,7 +237,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 
 	return {
 		repo: path.resolve(String(values.repo)),
-		range: parseRange(values),
+		rangeRequest: parseRangeRequest(values),
 		branch: values.branch,
 		author: values.author,
 		me: values.me,

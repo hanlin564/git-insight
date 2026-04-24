@@ -35,7 +35,7 @@ export function App({options, result}: AppProps) {
 			<Text color="green" bold>Git Insight</Text>
 			<Text>Repository: <Text color="cyan">{stats.repository.name}</Text></Text>
 			<Text>Branch: <Text color="cyan">{stats.branchName}</Text></Text>
-			<Text>Range: {options.range.label}</Text>
+			<Text>Range: {stats.range.label}</Text>
 			{options.author && <Text>Author filter: {options.author}</Text>}
 			{options.me && <Text>Author filter: {formatGitUser(stats.currentGitUser)}</Text>}
 			<Text> </Text>

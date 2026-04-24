@@ -36,6 +36,8 @@ node dist/index.js --repo /path/to/repo
 --since <days>         统计最近 N 天数据，默认 365
 --year <yyyy>          统计指定年份数据
 --month <yyyy-MM>      统计指定月份数据
+--from <date>          统计起始时间，支持 yyyy、yyyy-MM、yyyy-MM-dd
+--to <date>            统计结束时间，支持 yyyy、yyyy-MM、yyyy-MM-dd
 --branch <name>        指定分析分支，默认当前分支
 --author <query>       只展示匹配作者名称或邮箱的数据
 --me                   只展示当前 Git 配置用户的数据
@@ -43,7 +45,9 @@ node dist/index.js --repo /path/to/repo
 --no-ranking           关闭作者排名
 ```
 
-`--since`、`--year`、`--month` 只能指定其中一个；如果都不指定，默认使用 `--since 365`。
+`--since`、`--year`、`--month`、`--from/--to` 只能指定其中一种时间范围；如果都不指定，默认使用 `--since 365`。
+`--from` 和 `--to` 可以单独使用，也可以配合使用；配合使用时必须采用相同格式。只有 `--from` 时默认统计到当前日期，只有 `--to` 时默认从当前分析分支的第一个提交开始。
+所有时间范围最大支持 3650 天；超过一年的范围会使用月度热力图。
 `--author` 和 `--me` 只能指定其中一个。作者排名固定显示前 10 条。
 
 ## 示例
@@ -64,6 +68,24 @@ npm run dev -- --repo /path/to/repo --year 2025
 
 ```bash
 npm run dev -- --repo /path/to/repo --month 2025-04
+```
+
+查看 2024 年到 2025 年统计：
+
+```bash
+npm run dev -- --repo /path/to/repo --from 2024 --to 2025
+```
+
+查看 2025 年 4 月 1 日至 2025 年 4 月 20 日统计：
+
+```bash
+npm run dev -- --repo /path/to/repo --from 2025-04-01 --to 2025-04-20
+```
+
+查看从 2025 年 4 月至今的统计：
+
+```bash
+npm run dev -- --repo /path/to/repo --from 2025-04
 ```
 
 指定分析分支：

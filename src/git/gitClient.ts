@@ -66,6 +66,36 @@ export async function getLogWithNumstat(repoPath: string, range: DateRange, bran
 	}
 }
 
+export async function getFirstCommitDate(repoPath: string, branchRef: string): Promise<string | undefined> {
+	try {
+		const roots = await runGit(repoPath, [
+			'rev-list',
+			'--max-parents=0',
+			'--reverse',
+			branchRef
+		]);
+		const firstCommit = roots.split('\n').find(Boolean);
+
+		if (!firstCommit) {
+			return undefined;
+		}
+
+		return (await runGit(repoPath, [
+			'show',
+			'-s',
+			'--date=short',
+			'--format=%ad',
+			firstCommit
+		])).trim();
+	} catch (error) {
+		if (isEmptyRepositoryLogError(error)) {
+			return undefined;
+		}
+
+		throw error;
+	}
+}
+
 async function getCurrentBranchName(repoPath: string): Promise<string> {
 	const branchName = (await runGit(repoPath, ['branch', '--show-current'])).trim();
 	return branchName || 'HEAD';

@@ -1,13 +1,15 @@
-import type {CliOptions} from '../cli/parseArgs.js';
+import {createCustomDateRange, type CliOptions} from '../cli/parseArgs.js';
 import type {AuthorStat, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
 import {
 	createRepositoryTarget,
 	getCurrentGitUser,
+	getFirstCommitDate,
 	getLogWithNumstat,
 	GitBranchError,
 	GitRepositoryError,
 	resolveAnalysisBranch
 } from '../git/gitClient.js';
+import type {DateRange} from '../utils/date.js';
 import {parseGitLogWithNumstat} from '../git/gitLogParser.js';
 import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js';
 import {createAuthorIdentityResolver} from './authorIdentity.js';
@@ -25,6 +27,7 @@ export type RepositoryStats = {
 	heatmap?: ContributionHeatmapStat;
 	currentGitUser?: GitUserIdentity;
 	branchName: string;
+	range: DateRange;
 };
 
 export type RepositoryStatsResult =
@@ -35,7 +38,8 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 	try {
 		const repository = await createRepositoryTarget(options.repo);
 		const branch = await resolveAnalysisBranch(repository.path, options.branch);
-		const logOutput = branch.ref ? await getLogWithNumstat(repository.path, options.range, branch.ref) : '';
+		const range = await resolveDateRange(repository.path, branch.ref, options);
+		const logOutput = branch.ref ? await getLogWithNumstat(repository.path, range, branch.ref) : '';
 		const commits = parseGitLogWithNumstat(logOutput);
 		const authorAliases = await loadAuthorAliasLookup(repository.path);
 		const authorResolver = createAuthorIdentityResolver(commits, authorAliases);
@@ -56,10 +60,11 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				topByCommits: topAuthorsByCommits(authorStats, DEFAULT_RANKING_LIMIT),
 				topByChangedLines: topAuthorsByChangedLines(authorStats, DEFAULT_RANKING_LIMIT),
 				heatmap: options.heatmap
-					? collectContributionHeatmap(commits, options.range, authorResolver, options.author, currentGitUser)
+					? collectContributionHeatmap(commits, range, authorResolver, options.author, currentGitUser)
 					: undefined,
 				currentGitUser,
-				branchName: branch.name
+				branchName: branch.name,
+				range
 			}
 		};
 	} catch (error) {
@@ -69,4 +74,20 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 
 		throw error;
 	}
+}
+
+async function resolveDateRange(
+	repositoryPath: string,
+	branchRef: string | undefined,
+	options: CliOptions
+): Promise<DateRange> {
+	if (options.rangeRequest.kind === 'fixed') {
+		return options.rangeRequest.range;
+	}
+
+	const fallbackStartDate = branchRef && !options.rangeRequest.from
+		? await getFirstCommitDate(repositoryPath, branchRef)
+		: undefined;
+
+	return createCustomDateRange(options.rangeRequest, fallbackStartDate);
 }
