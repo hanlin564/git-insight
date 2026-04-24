@@ -2,6 +2,7 @@ import React from 'react';
 import {Box, Text} from 'ink';
 import type {CliOptions} from '../cli/parseArgs.js';
 import type {RepositoryStatsResult} from '../analysis/collectRepositoryStats.js';
+import type {GitUserIdentity} from '../git/types.js';
 import {Section} from './components/Section.js';
 import {ContributionHeatmap} from './components/ContributionHeatmap.js';
 import {AuthorRanking} from './components/AuthorRanking.js';
@@ -25,6 +26,10 @@ export function App({options, result}: AppProps) {
 
 	const {stats} = result;
 	const hasAuthorData = stats.authorStats.length > 0;
+	const heatmapTitle = options.currentUser ? '当前 Git 用户贡献热力图' : '仓库贡献热力图';
+	const heatmapScope = options.currentUser
+		? `统计口径：当前 Git 用户 ${formatGitUser(stats.currentGitUser)}`
+		: '统计口径：仓库内所有匹配作者';
 
 	return (
 		<Box flexDirection="column">
@@ -37,7 +42,8 @@ export function App({options, result}: AppProps) {
 			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}
 
 			{options.heatmap && stats.heatmap && (
-				<Section title={options.currentUser ? 'Current User Contribution Heatmap' : 'Repository Contribution Heatmap'}>
+				<Section title={heatmapTitle}>
+					<Text color="gray">{heatmapScope}</Text>
 					<ContributionHeatmap heatmap={stats.heatmap} />
 				</Section>
 			)}
@@ -52,4 +58,16 @@ export function App({options, result}: AppProps) {
 			)}
 		</Box>
 	);
+}
+
+function formatGitUser(user?: GitUserIdentity): string {
+	if (!user) {
+		return '未读取到';
+	}
+
+	if (user.name && user.email) {
+		return `${user.name} <${user.email}>`;
+	}
+
+	return user.name ?? user.email ?? '未读取到';
 }
