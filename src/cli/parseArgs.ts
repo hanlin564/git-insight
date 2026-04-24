@@ -1,6 +1,8 @@
 import path from 'node:path';
 import {Command} from 'commander';
 
+const MAX_SINCE_DAYS = 3650;
+
 export type CliOptions = {
 	since: number;
 	branchSince: number;
@@ -15,6 +17,15 @@ export type CliOptions = {
 const positiveInteger = (value: string, fallback: number): number => {
 	const parsed = Number.parseInt(value, 10);
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const boundedSinceDays = (value: string): number => {
+	const since = positiveInteger(value, 365);
+	if (since > MAX_SINCE_DAYS) {
+		throw new Error(`--since 最大支持 ${MAX_SINCE_DAYS} 天。`);
+	}
+
+	return since;
 };
 
 export function parseArgs(argv = process.argv): CliOptions {
@@ -36,7 +47,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 	const values = program.opts();
 
 	return {
-		since: positiveInteger(values.since, 365),
+		since: boundedSinceDays(values.since),
 		branchSince: positiveInteger(values.branchSince, 90),
 		top: positiveInteger(values.top, 10),
 		repo: path.resolve(String(values.repo)),

@@ -6,13 +6,27 @@ export function formatDate(date: Date): string {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+export function formatMonth(date: Date): string {
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+}
+
 export function startOfLocalDay(date: Date): Date {
 	return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function startOfLocalMonth(date: Date): Date {
+	return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
 export function addDays(date: Date, days: number): Date {
 	const next = new Date(date);
 	next.setDate(next.getDate() + days);
+	return next;
+}
+
+export function addMonths(date: Date, months: number): Date {
+	const next = new Date(date);
+	next.setMonth(next.getMonth() + months);
 	return next;
 }
 
@@ -26,6 +40,18 @@ export function getDateRange(days: number, endDate = new Date()): string[] {
 	}
 
 	return dates;
+}
+
+export function getMonthRange(days: number, endDate = new Date()): string[] {
+	const end = startOfLocalMonth(endDate);
+	const start = startOfLocalMonth(addDays(startOfLocalDay(endDate), -(days - 1)));
+	const months: string[] = [];
+
+	for (let cursor = start; cursor <= end; cursor = addMonths(cursor, 1)) {
+		months.push(formatMonth(cursor));
+	}
+
+	return months;
 }
 
 export function getMondayFirstWeekday(dateText: string): number {

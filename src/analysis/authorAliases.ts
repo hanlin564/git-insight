@@ -104,7 +104,7 @@ function parseAliasGroup(value: unknown, index: number): AuthorAliasGroup {
 	}
 
 	return {
-		primaryEmail,
+		primaryEmail: primaryEmail.trim(),
 		emails: uniqueEmails([primaryEmail, ...emails])
 	};
 }
@@ -135,7 +135,7 @@ function uniqueEmails(emails: string[]): string[] {
 
 		if (!seen.has(key)) {
 			seen.add(key);
-			result.push(email);
+			result.push(key);
 		}
 	}
 
@@ -143,7 +143,7 @@ function uniqueEmails(emails: string[]): string[] {
 }
 
 function normalizeEmail(email: string): string {
-	return email.trim().toLowerCase();
+	return email.trim();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -18,7 +18,7 @@ type BarChartProps = {
 
 export function BarChart({items, width = 24, color = 'green', emptyText = '暂无数据'}: BarChartProps) {
 	const max = Math.max(...items.map(item => item.value), 0);
-	const labelWidth = Math.min(Math.max(...items.map(item => item.label.length), 0), 24);
+	const labelWidth = Math.min(Math.max(...items.map(item => item.label.length), 0), 32);
 
 	if (items.length === 0) {
 		return <Text color="gray">{emptyText}</Text>;

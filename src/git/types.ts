@@ -26,8 +26,10 @@ export type AuthorStat = {
 	changedLines: number;
 };
 
-export type DailyCommitCount = {
-	date: string;
+export type HeatmapGranularity = 'daily' | 'monthly';
+
+export type HeatmapPeriodCount = {
+	period: string;
 	count: number;
 };
 
