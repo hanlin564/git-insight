@@ -13,6 +13,8 @@ export type ResolvedAuthorIdentity = {
 	key: string;
 	searchNames: string[];
 	searchEmails: string[];
+	signatureKeys: string[];
+	isAliasGroup: boolean;
 };
 
 export type AuthorIdentityResolver = {
@@ -62,12 +64,20 @@ export function createAuthorIdentityResolver(
 
 			const resolved = resolve(commit);
 			const email = normalizeEmail(identity.email ?? '');
+			const name = normalizeName(identity.name ?? '');
+
+			if (email && name) {
+				if (resolved.signatureKeys.includes(getSignatureKey(name, email))) {
+					return true;
+				}
+
+				return resolved.isAliasGroup
+					&& resolved.searchEmails.some(value => normalizeEmail(value) === email);
+			}
 
 			if (email) {
 				return resolved.searchEmails.some(value => normalizeEmail(value) === email);
 			}
-
-			const name = normalizeName(identity.name ?? '');
 
 			if (!name) {
 				return false;
@@ -84,14 +94,10 @@ function buildIdentityGroups(
 ): Map<string, ResolvedAuthorIdentity> {
 	const signatures = collectSignatures(commits);
 	const union = new UnionFind();
-	const firstSignatureByName = new Map<string, string>();
-	const firstSignatureByEmail = new Map<string, string>();
 	const signaturesByEmail = new Map<string, string[]>();
 
 	for (const signature of signatures.values()) {
 		union.add(signature.key);
-		mergeByKey(union, firstSignatureByName, normalizeName(signature.authorName), signature.key);
-		mergeByKey(union, firstSignatureByEmail, normalizeEmail(signature.authorEmail), signature.key);
 
 		const emailKey = normalizeEmail(signature.authorEmail);
 		const emailSignatures = signaturesByEmail.get(emailKey) ?? [];
@@ -184,37 +190,40 @@ function createGroupIdentity(
 	return {
 		authorName,
 		authorEmail,
-		key: getAuthorKey(authorName, authorEmail),
+		key: getResolvedAuthorKey(signatures, authorName, authorEmail, primaryEmail),
 		searchNames,
-		searchEmails
+		searchEmails,
+		signatureKeys: signatures.map(signature => signature.key),
+		isAliasGroup: Boolean(primaryEmail)
 	};
 }
 
 function createFallbackIdentity(commit: CommitRecord): ResolvedAuthorIdentity {
 	const authorEmail = normalizeEmail(commit.authorEmail);
+	const signatureKey = getSignatureKey(commit.authorName, authorEmail);
 
 	return {
 		authorName: commit.authorName,
 		authorEmail,
-		key: getAuthorKey(commit.authorName, authorEmail),
+		key: signatureKey,
 		searchNames: [commit.authorName],
-		searchEmails: [authorEmail]
+		searchEmails: [authorEmail],
+		signatureKeys: [signatureKey],
+		isAliasGroup: false
 	};
 }
 
-function mergeByKey(union: UnionFind, owners: Map<string, string>, groupKey: string, signatureKey: string): void {
-	if (!groupKey) {
-		return;
+function getResolvedAuthorKey(
+	signatures: AuthorSignature[],
+	authorName: string,
+	authorEmail: string,
+	primaryEmail?: string
+): string {
+	if (primaryEmail) {
+		return `alias:${normalizeEmail(primaryEmail)}`;
 	}
 
-	const owner = owners.get(groupKey);
-
-	if (owner) {
-		union.union(owner, signatureKey);
-		return;
-	}
-
-	owners.set(groupKey, signatureKey);
+	return signatures[0]?.key ?? getSignatureKey(authorName, authorEmail);
 }
 
 function chooseMostUsedValue(signatures: AuthorSignature[], getValue: (signature: AuthorSignature) => string): string {
@@ -270,22 +279,12 @@ function getSignatureKey(authorName: string, authorEmail: string): string {
 	return `${authorName}\u0000${normalizeEmail(authorEmail)}`;
 }
 
-function getAuthorKey(authorName: string, authorEmail: string): string {
-	const email = normalizeEmail(authorEmail);
-
-	if (email) {
-		return email;
-	}
-
-	return normalizeName(authorName);
-}
-
 function normalizeEmail(email: string): string {
 	return email.trim();
 }
 
 function normalizeName(value: string): string {
-	return value.trim().toLowerCase();
+	return value.trim();
 }
 
 class UnionFind {
