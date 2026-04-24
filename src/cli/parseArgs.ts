@@ -217,17 +217,48 @@ export function parseArgs(argv = process.argv): CliOptions {
 	program
 		.name('git-insight')
 		.description('一次性输出型 Git 仓库分析工具')
-		.option('--since <days>', '统计最近 N 天数据，默认 365')
+		.helpOption('-h, --help', '显示帮助信息')
+		.option('--since <days>', '统计最近 N 天数据，默认 365，最大 3650')
 		.option('--year <yyyy>', '统计指定年份数据')
 		.option('--month <yyyy-MM>', '统计指定月份数据')
 		.option('--from <date>', '统计起始时间，支持 yyyy、yyyy-MM、yyyy-MM-dd')
 		.option('--to <date>', '统计结束时间，支持 yyyy、yyyy-MM、yyyy-MM-dd')
 		.option('--branch <name>', '指定分析分支，默认当前分支')
-		.option('--repo <path>', 'Git 仓库目录', process.cwd())
+		.option('--repo <path>', '指定 Git 仓库目录，默认当前目录', process.cwd())
 		.option('--author <query>', '只展示匹配作者名称或邮箱的数据')
 		.option('--me', '只展示当前 Git 配置用户的数据')
 		.option('--no-heatmap', '关闭提交热力图')
-		.option('--no-ranking', '关闭作者排名');
+		.option('--no-ranking', '关闭作者排名')
+		.addHelpText('after', `
+时间范围:
+  默认使用 --since 365。
+  --since、--year、--month、--from/--to 只能选择一种时间范围。
+  --from 和 --to 可以单独使用；同时使用时必须采用相同格式。
+  只有 --from 时默认统计到今天，只有 --to 时默认从当前分析分支的第一个提交开始。
+  所有时间范围最大支持 ${MAX_SINCE_DAYS} 天。
+
+作者过滤:
+  --author 和 --me 只能选择一个。
+  --author 会匹配作者名称、邮箱和配置合并后的主邮箱。
+  --me 使用当前仓库 Git 配置中的 user.name / user.email。
+
+显示开关:
+  默认显示提交热力图和作者排名。
+  --no-heatmap 可关闭热力图，--no-ranking 可关闭作者排名。
+
+示例:
+  git-insight --help
+  git-insight
+  git-insight --repo /path/to/repo
+  git-insight --repo /path/to/repo --since 90
+  git-insight --repo /path/to/repo --year 2025
+  git-insight --repo /path/to/repo --month 2025-04
+  git-insight --repo /path/to/repo --from 2024 --to 2025
+  git-insight --repo /path/to/repo --from 2025-04-01 --to 2025-04-20
+  git-insight --repo /path/to/repo --branch main --author alice
+  git-insight --repo /path/to/repo --me
+  git-insight --repo /path/to/repo --no-heatmap --no-ranking
+`);
 
 	program.parse(argv);
 	const values = program.opts();
