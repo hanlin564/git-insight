@@ -13,11 +13,11 @@ export function AuthorRanking({stats}: AuthorRankingProps) {
 	return (
 		<Box flexDirection="column">
 			<Section title="Author Ranking by Commits">
-				<BarChart items={toAuthorItems(stats.topByCommits, author => author.commitCount)} />
+				<BarChart items={toAuthorItems(stats.topByCommits, author => author.commitCount)} barChar="━" />
 			</Section>
 
 			<Section title="Author Ranking by Changed Lines">
-				<BarChart items={toAuthorItems(stats.topByChangedLines, author => author.changedLines)} />
+				<BarChart items={toAuthorItems(stats.topByChangedLines, author => author.changedLines)} barChar="━" />
 			</Section>
 		</Box>
 	);
