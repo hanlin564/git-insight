@@ -2,6 +2,11 @@ import type {CommitRecord} from '../git/types.js';
 import {matchesText} from '../utils/text.js';
 import type {AuthorAliasLookup} from './authorAliases.js';
 
+export type AuthorIdentityQuery = {
+	name?: string;
+	email?: string;
+};
+
 export type ResolvedAuthorIdentity = {
 	authorName: string;
 	authorEmail: string;
@@ -13,6 +18,7 @@ export type ResolvedAuthorIdentity = {
 export type AuthorIdentityResolver = {
 	resolve: (commit: CommitRecord) => ResolvedAuthorIdentity;
 	matches: (commit: CommitRecord, authorQuery?: string) => boolean;
+	matchesIdentity: (commit: CommitRecord, identity?: AuthorIdentityQuery) => boolean;
 };
 
 export function createAuthorIdentityResolver(
@@ -58,6 +64,26 @@ export function createAuthorIdentityResolver(
 
 			const identity = resolve(commit);
 			return [...identity.searchNames, ...identity.searchEmails].some(value => matchesText(value, authorQuery));
+		},
+		matchesIdentity: (commit, identity) => {
+			if (!identity) {
+				return false;
+			}
+
+			const resolved = resolve(commit);
+			const email = normalizeEmail(identity.email ?? '');
+
+			if (email) {
+				return resolved.searchEmails.some(value => normalizeEmail(value) === email);
+			}
+
+			const name = normalizeText(identity.name ?? '');
+
+			if (!name) {
+				return false;
+			}
+
+			return resolved.searchNames.some(value => normalizeText(value) === name);
 		}
 	};
 }
@@ -104,4 +130,8 @@ function getAuthorKey(authorName: string, authorEmail: string): string {
 
 function normalizeEmail(email: string): string {
 	return email.trim().toLowerCase();
+}
+
+function normalizeText(value: string): string {
+	return value.trim().toLowerCase();
 }

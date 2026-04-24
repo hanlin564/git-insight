@@ -25,6 +25,7 @@ export function App({options, result}: AppProps) {
 
 	const {stats} = result;
 	const hasAuthorData = stats.authorStats.length > 0;
+	const hasHeatmapData = stats.heatmaps.length > 0;
 
 	return (
 		<Box flexDirection="column">
@@ -36,7 +37,7 @@ export function App({options, result}: AppProps) {
 
 			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}
 
-			{options.heatmap && hasAuthorData && (
+			{options.heatmap && hasHeatmapData && (
 				<Section title="Author Contribution Heatmaps">
 					{stats.heatmaps.map(heatmap => (
 						<AuthorHeatmap key={`${heatmap.authorName}-${heatmap.authorEmail}`} heatmap={heatmap} />

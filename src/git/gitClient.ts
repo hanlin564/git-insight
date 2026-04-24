@@ -1,6 +1,6 @@
 import path from 'node:path';
 import {execa} from 'execa';
-import type {RepositoryTarget} from './types.js';
+import type {GitUserIdentity, RepositoryTarget} from './types.js';
 
 export class GitRepositoryError extends Error {
 	constructor(repoPath: string) {
@@ -47,6 +47,22 @@ export async function getLogWithNumstat(repoPath: string, sinceDays: number): Pr
 	}
 }
 
+export async function getCurrentGitUser(repoPath: string): Promise<GitUserIdentity | undefined> {
+	const [email, name] = await Promise.all([
+		getGitConfigValue(repoPath, 'user.email'),
+		getGitConfigValue(repoPath, 'user.name')
+	]);
+
+	if (!email && !name) {
+		return undefined;
+	}
+
+	return {
+		...(name ? {name} : {}),
+		...(email ? {email} : {})
+	};
+}
+
 export async function getLocalBranches(repoPath: string): Promise<string[]> {
 	const output = await runGit(repoPath, ['branch', '--format=%(refname:short)']);
 	return output.split('\n').map(line => line.trim()).filter(Boolean);
@@ -65,6 +81,16 @@ export async function getBranchCommitCount(
 	]);
 
 	return Number.parseInt(output.trim(), 10) || 0;
+}
+
+async function getGitConfigValue(repoPath: string, key: string): Promise<string | undefined> {
+	try {
+		const output = await runGit(repoPath, ['config', '--get', key]);
+		const value = output.trim();
+		return value.length > 0 ? value : undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 function isEmptyRepositoryLogError(error: unknown): boolean {

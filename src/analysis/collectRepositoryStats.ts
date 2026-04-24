@@ -1,6 +1,6 @@
 import type {CliOptions} from '../cli/parseArgs.js';
 import type {AuthorStat, BranchStat, CommitRecord, RepositoryTarget} from '../git/types.js';
-import {createRepositoryTarget, getLogWithNumstat, GitRepositoryError} from '../git/gitClient.js';
+import {createRepositoryTarget, getCurrentGitUser, getLogWithNumstat, GitRepositoryError} from '../git/gitClient.js';
 import {parseGitLogWithNumstat} from '../git/gitLogParser.js';
 import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js';
 import {createAuthorIdentityResolver} from './authorIdentity.js';
@@ -30,6 +30,7 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 		const authorAliases = await loadAuthorAliasLookup(repository.path);
 		const authorResolver = createAuthorIdentityResolver(commits, authorAliases);
 		const authorStats = collectAuthorStats(commits, authorResolver, options.author);
+		const currentGitUser = options.heatmap ? await getCurrentGitUser(repository.path) : undefined;
 
 		return {
 			ok: true,
@@ -39,7 +40,7 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				authorStats,
 				topByCommits: topAuthorsByCommits(authorStats, options.top),
 				topByChangedLines: topAuthorsByChangedLines(authorStats, options.top),
-				heatmaps: options.heatmap ? collectAuthorHeatmaps(commits, options.since, authorResolver, options.author) : [],
+				heatmaps: options.heatmap && currentGitUser ? collectAuthorHeatmaps(commits, options.since, authorResolver, options.author, currentGitUser) : [],
 				branchStats: options.branch ? await collectBranchStats(repository.path, options.branchSince) : []
 			}
 		};

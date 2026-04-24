@@ -3,6 +3,11 @@ export type RepositoryTarget = {
 	name: string;
 };
 
+export type GitUserIdentity = {
+	name?: string;
+	email?: string;
+};
+
 export type CommitRecord = {
 	hash: string;
 	authorName: string;

@@ -35,6 +35,7 @@
 
 ```bash
 npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --since 90 --top 5
+npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Erp --since 3650 --top 10
 ```
 
 后续新增测试时，纯解析和统计逻辑优先使用就近的 `*.test.ts` 文件；UI 测试应聚焦关键渲染状态和空数据、错误数据等边界场景。
@@ -49,4 +50,4 @@ PR 应包含变更摘要、已运行的验证命令、相关 issue 链接；如�
 
 回复使用简体中文。提交代码时，提交信息使用简体中文。新增文档时，优先使用中文文件名；建议采用 `日期-中文主题.md` 的命名方式。
 
-后续需要手动验证 CLI 行为时，使用 `/Users/wanghanlin/MyCodes/workingCodes/Echo` 作为验证仓库。
+后续需要手动验证 CLI 行为时，优先使用 `/Users/wanghanlin/MyCodes/workingCodes/Echo` 作为常规验证仓库；需要验证多提交者、长期未维护老仓库等场景时，使用 `/Users/wanghanlin/MyCodes/workingCodes/Erp` 作为实验对象。
