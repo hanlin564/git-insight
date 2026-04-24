@@ -77,3 +77,22 @@ npm run dev -- --repo /path/to/repo --top 5
 - 分支活跃度：统计本地分支在最近 N 天内的提交数。
 
 如果指定目录不是 Git 仓库，工具会输出友好错误提示；如果统计范围内没有提交，会输出空状态提示。
+
+## 作者账号合并
+
+如果同一个用户使用了多个 Git 邮箱，可以在被分析仓库根目录创建 `.git-insight.json`，工具会默认读取并把同组合并账号的提交一起统计。文件不存在时保持原有统计行为；文件存在但 JSON 格式错误时会输出错误。
+
+配置示例：
+
+```json
+{
+  "authorAliases": [
+    {
+      "primaryEmail": "alice@company.com",
+      "emails": ["alice@company.com", "alice@gmail.com"]
+    }
+  ]
+}
+```
+
+合并规则只按邮箱精确匹配。合并后的作者排名、变更行数排名和热力图都会归入 `primaryEmail`；`--author` 可以匹配原始作者名、组内邮箱或主邮箱。

@@ -18,7 +18,7 @@ export function App({options, result}: AppProps) {
 			<Box flexDirection="column">
 				<Text color="green" bold>Git Insight</Text>
 				<Text color="red">{result.error}</Text>
-				<Text color="gray">请使用 --repo 指向一个有效 Git 仓库。</Text>
+				<Text color="gray">请检查 --repo 指向的 Git 仓库，或仓库根目录的 .git-insight.json。</Text>
 			</Box>
 		);
 	}

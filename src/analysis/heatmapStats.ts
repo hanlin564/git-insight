@@ -1,6 +1,6 @@
 import type {CommitRecord, DailyCommitCount} from '../git/types.js';
 import {getDateRange} from '../utils/date.js';
-import {matchesText} from '../utils/text.js';
+import type {AuthorIdentityResolver} from './authorIdentity.js';
 
 export type AuthorHeatmapStat = {
 	authorName: string;
@@ -8,23 +8,23 @@ export type AuthorHeatmapStat = {
 	days: DailyCommitCount[];
 };
 
-const getAuthorKey = (commit: CommitRecord): string => `${commit.authorName}<${commit.authorEmail}>`;
-
 export function collectAuthorHeatmaps(
 	commits: CommitRecord[],
 	sinceDays: number,
+	authorResolver: AuthorIdentityResolver,
 	authorQuery?: string
 ): AuthorHeatmapStat[] {
 	const dates = getDateRange(sinceDays);
 	const byAuthor = new Map<string, AuthorHeatmapStat>();
 
 	for (const commit of commits) {
-		if (!matchesText(commit.authorName, authorQuery) && !matchesText(commit.authorEmail, authorQuery)) {
+		if (!authorResolver.matches(commit, authorQuery)) {
 			continue;
 		}
 
-		const key = getAuthorKey(commit);
-		const stat = byAuthor.get(key) ?? createEmptyHeatmap(commit.authorName, commit.authorEmail, dates);
+		const author = authorResolver.resolve(commit);
+		const key = author.key;
+		const stat = byAuthor.get(key) ?? createEmptyHeatmap(author.authorName, author.authorEmail, dates);
 		const day = stat.days.find(item => item.date === commit.date);
 
 		if (day) {

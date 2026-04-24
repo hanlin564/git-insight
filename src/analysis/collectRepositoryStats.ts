@@ -2,6 +2,8 @@ import type {CliOptions} from '../cli/parseArgs.js';
 import type {AuthorStat, BranchStat, CommitRecord, RepositoryTarget} from '../git/types.js';
 import {createRepositoryTarget, getLogWithNumstat, GitRepositoryError} from '../git/gitClient.js';
 import {parseGitLogWithNumstat} from '../git/gitLogParser.js';
+import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js';
+import {createAuthorIdentityResolver} from './authorIdentity.js';
 import {collectAuthorStats, topAuthorsByChangedLines, topAuthorsByCommits} from './authorStats.js';
 import {collectAuthorHeatmaps, type AuthorHeatmapStat} from './heatmapStats.js';
 import {collectBranchStats} from './branchStats.js';
@@ -25,7 +27,9 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 		const repository = await createRepositoryTarget(options.repo);
 		const logOutput = await getLogWithNumstat(repository.path, options.since);
 		const commits = parseGitLogWithNumstat(logOutput);
-		const authorStats = collectAuthorStats(commits, options.author);
+		const authorAliases = await loadAuthorAliasLookup(repository.path);
+		const authorResolver = createAuthorIdentityResolver(commits, authorAliases);
+		const authorStats = collectAuthorStats(commits, authorResolver, options.author);
 
 		return {
 			ok: true,
@@ -35,12 +39,12 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				authorStats,
 				topByCommits: topAuthorsByCommits(authorStats, options.top),
 				topByChangedLines: topAuthorsByChangedLines(authorStats, options.top),
-				heatmaps: options.heatmap ? collectAuthorHeatmaps(commits, options.since, options.author) : [],
+				heatmaps: options.heatmap ? collectAuthorHeatmaps(commits, options.since, authorResolver, options.author) : [],
 				branchStats: options.branch ? await collectBranchStats(repository.path, options.branchSince) : []
 			}
 		};
 	} catch (error) {
-		if (error instanceof GitRepositoryError) {
+		if (error instanceof GitRepositoryError || error instanceof AuthorAliasConfigError) {
 			return {ok: false, error: error.message, repositoryPath: options.repo};
 		}
 

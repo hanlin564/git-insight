@@ -1,20 +1,23 @@
 import type {AuthorStat, CommitRecord} from '../git/types.js';
-import {matchesText} from '../utils/text.js';
+import type {AuthorIdentityResolver} from './authorIdentity.js';
 
-const getAuthorKey = (commit: CommitRecord): string => `${commit.authorName}<${commit.authorEmail}>`;
-
-export function collectAuthorStats(commits: CommitRecord[], authorQuery?: string): AuthorStat[] {
+export function collectAuthorStats(
+	commits: CommitRecord[],
+	authorResolver: AuthorIdentityResolver,
+	authorQuery?: string
+): AuthorStat[] {
 	const stats = new Map<string, AuthorStat>();
 
 	for (const commit of commits) {
-		if (!matchesText(commit.authorName, authorQuery) && !matchesText(commit.authorEmail, authorQuery)) {
+		if (!authorResolver.matches(commit, authorQuery)) {
 			continue;
 		}
 
-		const key = getAuthorKey(commit);
+		const author = authorResolver.resolve(commit);
+		const key = author.key;
 		const current = stats.get(key) ?? {
-			authorName: commit.authorName,
-			authorEmail: commit.authorEmail,
+			authorName: author.authorName,
+			authorEmail: author.authorEmail,
 			commitCount: 0,
 			additions: 0,
 			deletions: 0,

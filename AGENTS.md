@@ -34,7 +34,7 @@
 当前尚未配置测试框架或 `npm test` 脚本。修改后先通过构建和有针对性的手动运行验证，例如：
 
 ```bash
-npm run dev -- --repo /path/to/repo --since 90 --top 5
+npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --since 90 --top 5
 ```
 
 后续新增测试时，纯解析和统计逻辑优先使用就近的 `*.test.ts` 文件；UI 测试应聚焦关键渲染状态和空数据、错误数据等边界场景。
@@ -48,3 +48,5 @@ PR 应包含变更摘要、已运行的验证命令、相关 issue 链接；如�
 ## Agent 专用说明
 
 回复使用简体中文。提交代码时，提交信息使用简体中文。新增文档时，优先使用中文文件名；建议采用 `日期-中文主题.md` 的命名方式。
+
+后续需要手动验证 CLI 行为时，使用 `/Users/wanghanlin/MyCodes/workingCodes/Echo` 作为验证仓库。
