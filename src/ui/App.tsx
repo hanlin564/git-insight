@@ -3,7 +3,7 @@ import {Box, Text} from 'ink';
 import type {CliOptions} from '../cli/parseArgs.js';
 import type {RepositoryStatsResult} from '../analysis/collectRepositoryStats.js';
 import {Section} from './components/Section.js';
-import {AuthorHeatmap} from './components/AuthorHeatmap.js';
+import {ContributionHeatmap} from './components/ContributionHeatmap.js';
 import {AuthorRanking} from './components/AuthorRanking.js';
 import {BranchActivity} from './components/BranchActivity.js';
 
@@ -25,7 +25,6 @@ export function App({options, result}: AppProps) {
 
 	const {stats} = result;
 	const hasAuthorData = stats.authorStats.length > 0;
-	const hasHeatmapData = stats.heatmaps.length > 0;
 
 	return (
 		<Box flexDirection="column">
@@ -37,11 +36,9 @@ export function App({options, result}: AppProps) {
 
 			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}
 
-			{options.heatmap && hasHeatmapData && (
-				<Section title="Author Contribution Heatmaps">
-					{stats.heatmaps.map(heatmap => (
-						<AuthorHeatmap key={`${heatmap.authorName}-${heatmap.authorEmail}`} heatmap={heatmap} />
-					))}
+			{options.heatmap && stats.heatmap && (
+				<Section title={options.currentUser ? 'Current User Contribution Heatmap' : 'Repository Contribution Heatmap'}>
+					<ContributionHeatmap heatmap={stats.heatmap} />
 				</Section>
 			)}
 

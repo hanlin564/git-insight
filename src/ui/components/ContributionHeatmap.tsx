@@ -1,11 +1,11 @@
 import React from 'react';
 import {Box, Text} from 'ink';
 import type {HeatmapPeriodCount} from '../../git/types.js';
-import type {AuthorHeatmapStat} from '../../analysis/heatmapStats.js';
+import type {ContributionHeatmapStat} from '../../analysis/heatmapStats.js';
 import {getMondayFirstWeekday, getMonthLabel} from '../../utils/date.js';
 
-type AuthorHeatmapProps = {
-	heatmap: AuthorHeatmapStat;
+type ContributionHeatmapProps = {
+	heatmap: ContributionHeatmapStat;
 };
 
 type WeekColumn = Array<HeatmapPeriodCount | undefined>;
@@ -19,7 +19,7 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const COLORS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
 
-export function AuthorHeatmap({heatmap}: AuthorHeatmapProps) {
+export function ContributionHeatmap({heatmap}: ContributionHeatmapProps) {
 	if (heatmap.granularity === 'monthly') {
 		return <MonthlyHeatmap heatmap={heatmap} />;
 	}
@@ -27,15 +27,12 @@ export function AuthorHeatmap({heatmap}: AuthorHeatmapProps) {
 	return <DailyHeatmap heatmap={heatmap} />;
 }
 
-function DailyHeatmap({heatmap}: AuthorHeatmapProps) {
+function DailyHeatmap({heatmap}: ContributionHeatmapProps) {
 	const weeks = buildWeeks(heatmap.periods);
 	const monthLabels = buildMonthLabels(weeks);
 
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
-			<Text>
-				{heatmap.authorName} <Text color="gray">&lt;{heatmap.authorEmail}&gt;</Text>
-			</Text>
 			<Legend />
 			<Text color="gray">      {monthLabels}</Text>
 			{WEEKDAY_LABELS.map((label, rowIndex) => (
@@ -50,14 +47,11 @@ function DailyHeatmap({heatmap}: AuthorHeatmapProps) {
 	);
 }
 
-function MonthlyHeatmap({heatmap}: AuthorHeatmapProps) {
+function MonthlyHeatmap({heatmap}: ContributionHeatmapProps) {
 	const rows = buildYearRows(heatmap.periods);
 
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
-			<Text>
-				{heatmap.authorName} <Text color="gray">&lt;{heatmap.authorEmail}&gt;</Text>
-			</Text>
 			<Legend />
 			<Text color="gray">Monthly view</Text>
 			<Text color="gray">      {MONTH_LABELS.map(label => label.padEnd(4, ' ')).join('')}</Text>

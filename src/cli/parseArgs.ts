@@ -9,6 +9,7 @@ export type CliOptions = {
 	top: number;
 	repo: string;
 	author?: string;
+	currentUser: boolean;
 	heatmap: boolean;
 	ranking: boolean;
 	branch: boolean;
@@ -39,7 +40,8 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--top <number>', '排名输出数量', '10')
 		.option('--repo <path>', 'Git 仓库目录', process.cwd())
 		.option('--author <name>', '只展示匹配作者的数据')
-		.option('--no-heatmap', '关闭作者提交热力图')
+		.option('--current-user', '热力图只展示当前 Git 配置用户')
+		.option('--no-heatmap', '关闭提交热力图')
 		.option('--no-ranking', '关闭作者排名')
 		.option('--no-branch', '关闭分支活跃度');
 
@@ -52,6 +54,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		top: positiveInteger(values.top, 10),
 		repo: path.resolve(String(values.repo)),
 		author: values.author,
+		currentUser: values.currentUser,
 		heatmap: values.heatmap,
 		ranking: values.ranking,
 		branch: values.branch

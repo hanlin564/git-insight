@@ -5,7 +5,7 @@ import {parseGitLogWithNumstat} from '../git/gitLogParser.js';
 import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js';
 import {createAuthorIdentityResolver} from './authorIdentity.js';
 import {collectAuthorStats, topAuthorsByChangedLines, topAuthorsByCommits} from './authorStats.js';
-import {collectAuthorHeatmaps, type AuthorHeatmapStat} from './heatmapStats.js';
+import {collectContributionHeatmap, type ContributionHeatmapStat} from './heatmapStats.js';
 import {collectBranchStats} from './branchStats.js';
 
 export type RepositoryStats = {
@@ -14,7 +14,7 @@ export type RepositoryStats = {
 	authorStats: AuthorStat[];
 	topByCommits: AuthorStat[];
 	topByChangedLines: AuthorStat[];
-	heatmaps: AuthorHeatmapStat[];
+	heatmap?: ContributionHeatmapStat;
 	branchStats: BranchStat[];
 };
 
@@ -30,7 +30,7 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 		const authorAliases = await loadAuthorAliasLookup(repository.path);
 		const authorResolver = createAuthorIdentityResolver(commits, authorAliases);
 		const authorStats = collectAuthorStats(commits, authorResolver, options.author);
-		const currentGitUser = options.heatmap ? await getCurrentGitUser(repository.path) : undefined;
+		const currentGitUser = options.heatmap && options.currentUser ? await getCurrentGitUser(repository.path) : undefined;
 
 		return {
 			ok: true,
@@ -40,7 +40,9 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				authorStats,
 				topByCommits: topAuthorsByCommits(authorStats, options.top),
 				topByChangedLines: topAuthorsByChangedLines(authorStats, options.top),
-				heatmaps: options.heatmap && currentGitUser ? collectAuthorHeatmaps(commits, options.since, authorResolver, options.author, currentGitUser) : [],
+				heatmap: options.heatmap && (!options.currentUser || currentGitUser)
+					? collectContributionHeatmap(commits, options.since, authorResolver, options.author, currentGitUser)
+					: undefined,
 				branchStats: options.branch ? await collectBranchStats(repository.path, options.branchSince) : []
 			}
 		};
