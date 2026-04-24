@@ -6,7 +6,6 @@ import type {GitUserIdentity} from '../git/types.js';
 import {Section} from './components/Section.js';
 import {ContributionHeatmap} from './components/ContributionHeatmap.js';
 import {AuthorRanking} from './components/AuthorRanking.js';
-import {BranchActivity} from './components/BranchActivity.js';
 
 type AppProps = {
 	options: CliOptions;
@@ -19,15 +18,15 @@ export function App({options, result}: AppProps) {
 			<Box flexDirection="column">
 				<Text color="green" bold>Git Insight</Text>
 				<Text color="red">{result.error}</Text>
-				<Text color="gray">请检查 --repo 指向的 Git 仓库，或仓库根目录的 .git-insight.json。</Text>
+				<Text color="gray">请检查 --repo、--branch，或仓库根目录的 .git-insight.json。</Text>
 			</Box>
 		);
 	}
 
 	const {stats} = result;
 	const hasAuthorData = stats.authorStats.length > 0;
-	const heatmapTitle = options.currentUser ? '当前 Git 用户贡献热力图' : '仓库贡献热力图';
-	const heatmapScope = options.currentUser
+	const heatmapTitle = options.me ? '当前 Git 用户贡献热力图' : '仓库贡献热力图';
+	const heatmapScope = options.me
 		? `统计口径：当前 Git 用户 ${formatGitUser(stats.currentGitUser)}`
 		: '统计口径：仓库内所有匹配作者';
 
@@ -35,8 +34,10 @@ export function App({options, result}: AppProps) {
 		<Box flexDirection="column">
 			<Text color="green" bold>Git Insight</Text>
 			<Text>Repository: <Text color="cyan">{stats.repository.name}</Text></Text>
-			<Text>Range: last {options.since} days</Text>
+			<Text>Branch: <Text color="cyan">{stats.branchName}</Text></Text>
+			<Text>Range: {options.range.label}</Text>
 			{options.author && <Text>Author filter: {options.author}</Text>}
+			{options.me && <Text>Author filter: {formatGitUser(stats.currentGitUser)}</Text>}
 			<Text> </Text>
 
 			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}
@@ -49,13 +50,6 @@ export function App({options, result}: AppProps) {
 			)}
 
 			{options.ranking && hasAuthorData && <AuthorRanking stats={stats} />}
-
-			{options.branch && (
-				<Section title="Branch Activity">
-					<Text color="gray">Range: last {options.branchSince} days</Text>
-					<BranchActivity branches={stats.branchStats} top={options.top} />
-				</Section>
-			)}
 		</Box>
 	);
 }

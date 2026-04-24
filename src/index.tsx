@@ -9,6 +9,10 @@ async function main() {
 	const options = parseArgs();
 	const result = await collectRepositoryStats(options);
 
+	if (!result.ok) {
+		process.exitCode = 1;
+	}
+
 	render(<App options={options} result={result} />);
 }
 

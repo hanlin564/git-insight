@@ -1,8 +1,8 @@
 import type {CommitRecord, HeatmapGranularity, HeatmapPeriodCount} from '../git/types.js';
-import {getDateRange, getMonthRange} from '../utils/date.js';
+import {getDateRangeBetween, getMonthRangeBetween, type DateRange} from '../utils/date.js';
 import type {AuthorIdentityQuery, AuthorIdentityResolver} from './authorIdentity.js';
 
-const DAILY_HEATMAP_MAX_DAYS = 365;
+const DAILY_HEATMAP_MAX_DAYS = 366;
 
 export type ContributionHeatmapStat = {
 	granularity: HeatmapGranularity;
@@ -11,13 +11,15 @@ export type ContributionHeatmapStat = {
 
 export function collectContributionHeatmap(
 	commits: CommitRecord[],
-	sinceDays: number,
+	range: DateRange,
 	authorResolver: AuthorIdentityResolver,
 	authorQuery?: string,
 	currentUser?: AuthorIdentityQuery
 ): ContributionHeatmapStat | undefined {
-	const granularity: HeatmapGranularity = sinceDays <= DAILY_HEATMAP_MAX_DAYS ? 'daily' : 'monthly';
-	const periods = granularity === 'daily' ? getDateRange(sinceDays) : getMonthRange(sinceDays);
+	const granularity: HeatmapGranularity = range.dayCount <= DAILY_HEATMAP_MAX_DAYS ? 'daily' : 'monthly';
+	const periods = granularity === 'daily'
+		? getDateRangeBetween(range.startDate, range.endDate)
+		: getMonthRangeBetween(range.startDate.slice(0, 7), range.endDate.slice(0, 7));
 	const stat = createEmptyHeatmap(granularity, periods);
 	let hasCommit = false;
 

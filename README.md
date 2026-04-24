@@ -33,22 +33,43 @@ node dist/index.js --repo /path/to/repo
 
 ```bash
 --repo <path>           指定 Git 仓库目录，默认当前目录
---since <days>         热力图和作者统计范围，默认 365
---branch-since <days>  分支活跃度统计范围，默认 90
---top <number>         排名输出数量，默认 10
---author <name>        只展示匹配作者名称或邮箱的数据
---current-user         热力图只展示当前 Git 配置用户
+--since <days>         统计最近 N 天数据，默认 365
+--year <yyyy>          统计指定年份数据
+--month <yyyy-MM>      统计指定月份数据
+--branch <name>        指定分析分支，默认当前分支
+--author <query>       只展示匹配作者名称或邮箱的数据
+--me                   只展示当前 Git 配置用户的数据
 --no-heatmap           关闭提交热力图
 --no-ranking           关闭作者排名
---no-branch            关闭分支活跃度
 ```
+
+`--since`、`--year`、`--month` 只能指定其中一个；如果都不指定，默认使用 `--since 365`。
+`--author` 和 `--me` 只能指定其中一个。作者排名固定显示前 10 条。
 
 ## 示例
 
 查看最近 90 天统计：
 
 ```bash
-npm run dev -- --repo /path/to/repo --since 90 --branch-since 90
+npm run dev -- --repo /path/to/repo --since 90
+```
+
+查看 2025 年统计：
+
+```bash
+npm run dev -- --repo /path/to/repo --year 2025
+```
+
+查看 2025 年 4 月统计：
+
+```bash
+npm run dev -- --repo /path/to/repo --month 2025-04
+```
+
+指定分析分支：
+
+```bash
+npm run dev -- --repo /path/to/repo --branch main --since 90
 ```
 
 只看指定作者：
@@ -57,33 +78,26 @@ npm run dev -- --repo /path/to/repo --since 90 --branch-since 90
 npm run dev -- --repo /path/to/repo --author alice
 ```
 
-只看当前 Git 配置用户的提交热力图：
+只看当前 Git 配置用户的数据：
 
 ```bash
-npm run dev -- --repo /path/to/repo --current-user
+npm run dev -- --repo /path/to/repo --me
 ```
 
-关闭热力图，只看排名和分支活跃度：
+关闭热力图，只看作者排名：
 
 ```bash
 npm run dev -- --repo /path/to/repo --no-heatmap
 ```
 
-只输出 Top 5：
-
-```bash
-npm run dev -- --repo /path/to/repo --top 5
-```
-
 ## 输出内容
 
-工具会输出三类核心信息：
+工具会输出两类核心信息：
 
 - 仓库提交热力图：GitHub 风格绿色分层，按周排列，纵向为周一到周日。
 - 作者提交量排名：按提交次数和变更行数分别排名，变更行数为 additions + deletions。
-- 分支活跃度：统计本地分支在最近 N 天内的提交数。
 
-默认用一张热力图展示整个仓库的提交频率；如果需要只查看当前 Git 配置用户，可以传入 `--current-user`。
+默认分析当前分支，并用一张热力图展示当前统计范围内的提交频率；如果需要只查看当前 Git 配置用户，可以传入 `--me`。
 
 如果指定目录不是 Git 仓库，工具会输出友好错误提示；如果统计范围内没有提交，会输出空状态提示。
 
@@ -109,4 +123,4 @@ npm run dev -- --repo /path/to/repo --top 5
 }
 ```
 
-配置中的邮箱按精确匹配处理。合并后的作者排名和变更行数排名都会归入同一作者；展示名优先使用提交数最多的原始作者名，配置组的展示邮箱优先使用 `primaryEmail`。`--author` 可以匹配原始作者名、组内邮箱或主邮箱，`--current-user` 也会复用配置合并关系。
+配置中的邮箱按精确匹配处理。合并后的作者排名和变更行数排名都会归入同一作者；展示名优先使用提交数最多的原始作者名，配置组的展示邮箱优先使用 `primaryEmail`。`--author` 可以匹配原始作者名、组内邮箱或主邮箱，`--me` 也会复用配置合并关系。

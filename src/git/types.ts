@@ -32,8 +32,3 @@ export type HeatmapPeriodCount = {
 	period: string;
 	count: number;
 };
-
-export type BranchStat = {
-	branchName: string;
-	commitCount: number;
-};

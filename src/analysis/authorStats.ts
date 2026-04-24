@@ -1,14 +1,19 @@
 import type {AuthorStat, CommitRecord} from '../git/types.js';
-import type {AuthorIdentityResolver} from './authorIdentity.js';
+import type {AuthorIdentityQuery, AuthorIdentityResolver} from './authorIdentity.js';
 
 export function collectAuthorStats(
 	commits: CommitRecord[],
 	authorResolver: AuthorIdentityResolver,
-	authorQuery?: string
+	authorQuery?: string,
+	currentUser?: AuthorIdentityQuery
 ): AuthorStat[] {
 	const stats = new Map<string, AuthorStat>();
 
 	for (const commit of commits) {
+		if (currentUser && !authorResolver.matchesIdentity(commit, currentUser)) {
+			continue;
+		}
+
 		if (!authorResolver.matches(commit, authorQuery)) {
 			continue;
 		}

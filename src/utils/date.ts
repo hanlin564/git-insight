@@ -1,5 +1,13 @@
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+export type DateRange = {
+	kind: 'since' | 'year' | 'month';
+	startDate: string;
+	endDate: string;
+	label: string;
+	dayCount: number;
+};
+
 const pad = (value: number): string => value.toString().padStart(2, '0');
 
 export function formatDate(date: Date): string {
@@ -33,6 +41,12 @@ export function addMonths(date: Date, months: number): Date {
 export function getDateRange(days: number, endDate = new Date()): string[] {
 	const end = startOfLocalDay(endDate);
 	const start = addDays(end, -(days - 1));
+	return getDateRangeBetween(formatDate(start), formatDate(end));
+}
+
+export function getDateRangeBetween(startDate: string, endDate: string): string[] {
+	const start = new Date(`${startDate}T00:00:00`);
+	const end = new Date(`${endDate}T00:00:00`);
 	const dates: string[] = [];
 
 	for (let cursor = start; cursor <= end; cursor = addDays(cursor, 1)) {
@@ -45,6 +59,12 @@ export function getDateRange(days: number, endDate = new Date()): string[] {
 export function getMonthRange(days: number, endDate = new Date()): string[] {
 	const end = startOfLocalMonth(endDate);
 	const start = startOfLocalMonth(addDays(startOfLocalDay(endDate), -(days - 1)));
+	return getMonthRangeBetween(formatMonth(start), formatMonth(end));
+}
+
+export function getMonthRangeBetween(startMonth: string, endMonth: string): string[] {
+	const start = startOfLocalMonth(new Date(`${startMonth}-01T00:00:00`));
+	const end = startOfLocalMonth(new Date(`${endMonth}-01T00:00:00`));
 	const months: string[] = [];
 
 	for (let cursor = start; cursor <= end; cursor = addMonths(cursor, 1)) {

@@ -1,11 +1,19 @@
 import path from 'node:path';
 import {execa} from 'execa';
+import type {DateRange} from '../utils/date.js';
 import type {GitUserIdentity, RepositoryTarget} from './types.js';
 
 export class GitRepositoryError extends Error {
 	constructor(repoPath: string) {
 		super(`目录不是 Git 仓库：${repoPath}`);
 		this.name = 'GitRepositoryError';
+	}
+}
+
+export class GitBranchError extends Error {
+	constructor(branchName: string) {
+		super(`找不到指定分支：${branchName}`);
+		this.name = 'GitBranchError';
 	}
 }
 
@@ -29,11 +37,22 @@ export async function createRepositoryTarget(repoPath: string): Promise<Reposito
 	};
 }
 
-export async function getLogWithNumstat(repoPath: string, sinceDays: number): Promise<string> {
+export async function resolveAnalysisBranch(
+	repoPath: string,
+	branchName?: string
+): Promise<{name: string; ref?: string}> {
+	const name = branchName ?? await getCurrentBranchName(repoPath);
+	const ref = branchName ? await resolveBranchRef(repoPath, name) : await resolveCurrentBranchRef(repoPath, name);
+	return {name, ref};
+}
+
+export async function getLogWithNumstat(repoPath: string, range: DateRange, branchRef: string): Promise<string> {
 	try {
 		return await runGit(repoPath, [
 			'log',
-			`--since=${sinceDays} days ago`,
+			branchRef,
+			`--since=${range.startDate} 00:00:00`,
+			`--until=${range.endDate} 23:59:59`,
 			'--numstat',
 			'--date=short',
 			'--pretty=format:__COMMIT__%H|%an|%ae|%ad'
@@ -44,6 +63,27 @@ export async function getLogWithNumstat(repoPath: string, sinceDays: number): Pr
 		}
 
 		throw error;
+	}
+}
+
+async function getCurrentBranchName(repoPath: string): Promise<string> {
+	const branchName = (await runGit(repoPath, ['branch', '--show-current'])).trim();
+	return branchName || 'HEAD';
+}
+
+async function resolveBranchRef(repoPath: string, branchName: string): Promise<string> {
+	try {
+		return (await runGit(repoPath, ['rev-parse', '--verify', `${branchName}^{commit}`])).trim();
+	} catch {
+		throw new GitBranchError(branchName);
+	}
+}
+
+async function resolveCurrentBranchRef(repoPath: string, branchName: string): Promise<string | undefined> {
+	try {
+		return (await runGit(repoPath, ['rev-parse', '--verify', `${branchName}^{commit}`])).trim();
+	} catch {
+		return undefined;
 	}
 }
 
@@ -61,26 +101,6 @@ export async function getCurrentGitUser(repoPath: string): Promise<GitUserIdenti
 		...(name ? {name} : {}),
 		...(email ? {email} : {})
 	};
-}
-
-export async function getLocalBranches(repoPath: string): Promise<string[]> {
-	const output = await runGit(repoPath, ['branch', '--format=%(refname:short)']);
-	return output.split('\n').map(line => line.trim()).filter(Boolean);
-}
-
-export async function getBranchCommitCount(
-	repoPath: string,
-	branchName: string,
-	sinceDays: number
-): Promise<number> {
-	const output = await runGit(repoPath, [
-		'rev-list',
-		'--count',
-		`--since=${sinceDays} days ago`,
-		branchName
-	]);
-
-	return Number.parseInt(output.trim(), 10) || 0;
 }
 
 async function getGitConfigValue(repoPath: string, key: string): Promise<string | undefined> {

@@ -1,12 +1,20 @@
 import type {CliOptions} from '../cli/parseArgs.js';
-import type {AuthorStat, BranchStat, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
-import {createRepositoryTarget, getCurrentGitUser, getLogWithNumstat, GitRepositoryError} from '../git/gitClient.js';
+import type {AuthorStat, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
+import {
+	createRepositoryTarget,
+	getCurrentGitUser,
+	getLogWithNumstat,
+	GitBranchError,
+	GitRepositoryError,
+	resolveAnalysisBranch
+} from '../git/gitClient.js';
 import {parseGitLogWithNumstat} from '../git/gitLogParser.js';
 import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js';
 import {createAuthorIdentityResolver} from './authorIdentity.js';
 import {collectAuthorStats, topAuthorsByChangedLines, topAuthorsByCommits} from './authorStats.js';
 import {collectContributionHeatmap, type ContributionHeatmapStat} from './heatmapStats.js';
-import {collectBranchStats} from './branchStats.js';
+
+const DEFAULT_RANKING_LIMIT = 10;
 
 export type RepositoryStats = {
 	repository: RepositoryTarget;
@@ -16,7 +24,7 @@ export type RepositoryStats = {
 	topByChangedLines: AuthorStat[];
 	heatmap?: ContributionHeatmapStat;
 	currentGitUser?: GitUserIdentity;
-	branchStats: BranchStat[];
+	branchName: string;
 };
 
 export type RepositoryStatsResult =
@@ -26,12 +34,18 @@ export type RepositoryStatsResult =
 export async function collectRepositoryStats(options: CliOptions): Promise<RepositoryStatsResult> {
 	try {
 		const repository = await createRepositoryTarget(options.repo);
-		const logOutput = await getLogWithNumstat(repository.path, options.since);
+		const branch = await resolveAnalysisBranch(repository.path, options.branch);
+		const logOutput = branch.ref ? await getLogWithNumstat(repository.path, options.range, branch.ref) : '';
 		const commits = parseGitLogWithNumstat(logOutput);
 		const authorAliases = await loadAuthorAliasLookup(repository.path);
 		const authorResolver = createAuthorIdentityResolver(commits, authorAliases);
-		const authorStats = collectAuthorStats(commits, authorResolver, options.author);
-		const currentGitUser = options.heatmap && options.currentUser ? await getCurrentGitUser(repository.path) : undefined;
+		const currentGitUser = options.me ? await getCurrentGitUser(repository.path) : undefined;
+
+		if (options.me && !currentGitUser) {
+			return {ok: false, error: '未读取到当前 Git 配置用户，请先配置 user.name 或 user.email。', repositoryPath: options.repo};
+		}
+
+		const authorStats = collectAuthorStats(commits, authorResolver, options.author, currentGitUser);
 
 		return {
 			ok: true,
@@ -39,17 +53,17 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				repository,
 				commits,
 				authorStats,
-				topByCommits: topAuthorsByCommits(authorStats, options.top),
-				topByChangedLines: topAuthorsByChangedLines(authorStats, options.top),
-				heatmap: options.heatmap && (!options.currentUser || currentGitUser)
-					? collectContributionHeatmap(commits, options.since, authorResolver, options.author, currentGitUser)
+				topByCommits: topAuthorsByCommits(authorStats, DEFAULT_RANKING_LIMIT),
+				topByChangedLines: topAuthorsByChangedLines(authorStats, DEFAULT_RANKING_LIMIT),
+				heatmap: options.heatmap
+					? collectContributionHeatmap(commits, options.range, authorResolver, options.author, currentGitUser)
 					: undefined,
 				currentGitUser,
-				branchStats: options.branch ? await collectBranchStats(repository.path, options.branchSince) : []
+				branchName: branch.name
 			}
 		};
 	} catch (error) {
-		if (error instanceof GitRepositoryError || error instanceof AuthorAliasConfigError) {
+		if (error instanceof GitRepositoryError || error instanceof GitBranchError || error instanceof AuthorAliasConfigError) {
 			return {ok: false, error: error.message, repositoryPath: options.repo};
 		}
 
