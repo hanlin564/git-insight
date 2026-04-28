@@ -85,7 +85,12 @@ error: unknown option '--since'
 - 在构建前清理 `dist`。
 - 因项目禁止直接手动编辑 `dist`，应通过构建脚本统一处理生成目录。
 
-## 4. 仓库校验会吞掉真实 Git 错误
+## 4. 仓库校验会吞掉真实 Git 错误（已完成）
+
+### 处理结果
+
+- 已将 `createRepositoryTarget` 的错误处理改为只在 Git 明确返回 `not a git repository` 时转换为 `GitRepositoryError`。
+- 其他 Git 或环境异常会保留原始错误继续向上抛出，避免误报为“目录不是 Git 仓库”。
 
 ### 现象
 

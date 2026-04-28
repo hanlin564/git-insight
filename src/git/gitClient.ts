@@ -27,7 +27,11 @@ export async function createRepositoryTarget(repoPath: string): Promise<Reposito
 
 	try {
 		rootPath = (await runGit(repoPath, ['rev-parse', '--show-toplevel'])).trim();
-	} catch {
+	} catch (error) {
+		if (!isNotGitRepositoryError(error)) {
+			throw error;
+		}
+
 		throw new GitRepositoryError(repoPath);
 	}
 
@@ -146,6 +150,10 @@ async function getGitConfigValue(repoPath: string, key: string): Promise<string 
 function isEmptyRepositoryLogError(error: unknown): boolean {
 	const detail = getErrorDetail(error).toLowerCase();
 	return detail.includes('does not have any commits') || detail.includes('bad default revision');
+}
+
+function isNotGitRepositoryError(error: unknown): boolean {
+	return getErrorDetail(error).toLowerCase().includes('not a git repository');
 }
 
 function getErrorDetail(error: unknown): string {
