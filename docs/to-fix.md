@@ -107,7 +107,14 @@ error: unknown option '--since'
 - 只把明确的“不是 Git 仓库”错误转换成 `GitRepositoryError`。
 - 对其他错误保留原始错误信息，或包装成更具体的环境错误。
 
-## 5. 终端表格宽度对中文和宽字符不准确
+## 5. 终端表格宽度对中文和宽字符不准确（已完成）
+
+### 处理结果
+
+- 已将 `string-width` 和 `slice-ansi` 补充为直接依赖，避免源码依赖传递依赖。
+- 已将 `BarChart` 的标签宽度计算改为按终端显示宽度计算，中文、emoji 等宽字符不再按 JavaScript 字符串长度估算。
+- 已将 `padEndSafe` 改为按终端显示宽度截断和补齐，并避免普通 Unicode 文本截断时破坏组合字符。
+- 已通过临时仓库验证中文、emoji 和组合字符作者名的柱状图对齐效果，并通过 Echo 仓库验证常规显示未退化。
 
 ### 现象
 
@@ -131,6 +138,7 @@ error: unknown option '--since'
 
 ```bash
 npm run build
+npm run dev -- --repo /tmp/git-insight-wide.C0Rgu0 --last 3650 --no-heatmap
 npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90 --no-heatmap
 npm start -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90 --no-heatmap
 npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Erp --since 3650 --top 10
@@ -139,5 +147,6 @@ npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Erp --since 3650 --
 结果：
 
 - `npm run build` 通过。
+- 临时仓库包含中文、emoji 和组合字符作者名，作者排名柱状图对齐正常。
 - Echo 仓库的 `dev` 和 `start` 验证通过。
 - Erp 仓库旧参数命令失败，报 `unknown option '--since'`。

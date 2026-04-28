@@ -1,7 +1,7 @@
 import React from 'react';
 import {Box, Text} from 'ink';
 import {formatNumber} from '../../utils/number.js';
-import {padEndSafe} from '../../utils/text.js';
+import {getDisplayWidth, padEndSafe} from '../../utils/text.js';
 
 export type BarChartItem = {
 	key?: string;
@@ -29,7 +29,7 @@ export function BarChart({
 	barChar = '█'
 }: BarChartProps) {
 	const max = Math.max(...items.map(item => item.value), 0);
-	const labelWidth = Math.min(Math.max(...items.map(item => item.label.length), 0), 32);
+	const labelWidth = Math.min(Math.max(...items.map(item => getDisplayWidth(item.label)), 0), 32);
 	const barPadding = ' '.repeat(barGap);
 
 	if (items.length === 0) {
