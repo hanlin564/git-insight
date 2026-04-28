@@ -34,8 +34,8 @@
 当前尚未配置测试框架或 `npm test` 脚本。修改后先通过构建和有针对性的手动运行验证，例如：
 
 ```bash
-npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90 --top 5
-npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Erp --last 3650 --top 10
+npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90
+npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Erp --last 3650
 ```
 
 后续新增测试时，纯解析和统计逻辑优先使用就近的 `*.test.ts` 文件；UI 测试应聚焦关键渲染状态和空数据、错误数据等边界场景。
