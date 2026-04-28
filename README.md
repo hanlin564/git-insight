@@ -130,19 +130,23 @@ npm run dev -- --repo /path/to/repo --no-heatmap
 - 同名但邮箱不同，例如 `Ray-ux <work@example.com>` 和 `Ray-ux <personal@example.com>`。
 - 同邮箱但作者名不同，例如 `Ray <ray@example.com>` 和 `Ray-ux <ray@example.com>`。
 
-如果需要合并不同 Git 作者签名，可以在被分析仓库根目录创建 `.git-insight.json` 配置合并关系。文件不存在时不做跨签名合并；文件存在但 JSON 格式错误时会输出错误。
+如果需要合并不同 Git 作者签名，可以在被分析仓库根目录创建 `.git-insight.json` 配置合并关系。文件不存在时不做跨签名合并；文件存在但 JSON 格式错误或配置结构不符合规则时会输出错误。
 
 配置示例：
 
 ```json
 {
-  "authorAliases": [
+  "authors": [
     {
-      "primaryEmail": "alice@company.com",
+      "displayName": "Alice",
+      "displayEmail": "alice@company.com",
+      "names": ["Alice", "alice"],
       "emails": ["alice@company.com", "alice@gmail.com"]
     }
   ]
 }
 ```
 
-配置中的邮箱按精确匹配处理。合并后的作者排名和变更行数排名都会归入同一作者；展示名优先使用提交数最多的原始作者名，配置组的展示邮箱优先使用 `primaryEmail`。`--author` 可以匹配原始作者名、组内邮箱或主邮箱，`--me` 也会复用配置合并关系。
+配置中的作者名称和邮箱都按精确匹配处理，并会先去除首尾空白；大小写不同会被视为不同值。每个合并组的 `names` 和 `emails` 至少配置一个，命中任一名称或邮箱的提交都会归入该组。`displayName` 和 `displayEmail` 用于指定最终展示名称和邮箱，均可省略；省略时展示名优先使用提交数最多的原始作者名，展示邮箱沿用自动选择结果。
+
+同一个名称或邮箱不能出现在多个合并组中；如果某个提交签名同时命中多个合并组，也会按配置错误处理。合并后的作者排名和变更行数排名都会归入同一作者；`--author` 可以匹配原始作者名、原始邮箱、配置名称、配置邮箱、展示名称或展示邮箱，`--me` 也会复用配置合并关系。

@@ -239,7 +239,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 
 作者过滤:
   --author 和 --me 只能选择一个。
-  --author 会匹配作者名称、邮箱和配置合并后的主邮箱。
+  --author 会匹配作者名称、邮箱和配置合并后的展示名称/邮箱。
   --me 使用当前仓库 Git 配置中的 user.name / user.email。
 
 显示开关:

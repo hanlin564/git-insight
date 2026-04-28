@@ -2,14 +2,15 @@ import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 
 export type AuthorAliasGroup = {
-	primaryEmail: string;
+	key: string;
+	displayName?: string;
+	displayEmail?: string;
+	names: string[];
 	emails: string[];
 };
 
 export type AuthorAliasLookup = {
 	groups: AuthorAliasGroup[];
-	getPrimaryEmail: (email: string) => string | undefined;
-	getGroupEmails: (primaryEmail: string) => string[];
 };
 
 export class AuthorAliasConfigError extends Error {
@@ -20,7 +21,7 @@ export class AuthorAliasConfigError extends Error {
 }
 
 type RawAuthorAliasConfig = {
-	authorAliases: unknown;
+	authors: unknown;
 };
 
 export async function loadAuthorAliasLookup(
@@ -37,22 +38,8 @@ export async function loadAuthorAliasLookup(
 }
 
 function createAuthorAliasLookup(groups: AuthorAliasGroup[]): AuthorAliasLookup {
-	const primaryByEmail = new Map<string, string>();
-	const emailsByPrimary = new Map<string, string[]>();
-
-	for (const group of groups) {
-		const primaryKey = normalizeEmail(group.primaryEmail);
-		emailsByPrimary.set(primaryKey, group.emails);
-
-		for (const email of group.emails) {
-			primaryByEmail.set(normalizeEmail(email), group.primaryEmail);
-		}
-	}
-
 	return {
-		groups,
-		getPrimaryEmail: email => primaryByEmail.get(normalizeEmail(email)),
-		getGroupEmails: primaryEmail => emailsByPrimary.get(normalizeEmail(primaryEmail)) ?? []
+		groups
 	};
 }
 
@@ -77,13 +64,13 @@ function parseAuthorAliasConfig(content: string, filePath: string): AuthorAliasG
 		throw new AuthorAliasConfigError(`作者合并配置 JSON 格式错误：${filePath}`);
 	}
 
-	if (!isRecord(value) || !Array.isArray((value as RawAuthorAliasConfig).authorAliases)) {
-		throw new AuthorAliasConfigError('作者合并配置必须包含 authorAliases 数组。');
+	if (!isRecord(value) || !Array.isArray((value as RawAuthorAliasConfig).authors)) {
+		throw new AuthorAliasConfigError('作者合并配置必须包含 authors 数组。');
 	}
 
-	const rawAliases = (value as {authorAliases: unknown[]}).authorAliases;
+	const rawAliases = (value as {authors: unknown[]}).authors;
 	const groups = rawAliases.map((group, index) => parseAliasGroup(group, index));
-	assertUniqueEmails(groups);
+	assertUniqueMatchers(groups);
 	return groups;
 }
 
@@ -92,27 +79,59 @@ function parseAliasGroup(value: unknown, index: number): AuthorAliasGroup {
 		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置必须是对象。`);
 	}
 
-	const primaryEmail = value.primaryEmail;
+	const displayName = value.displayName;
+	const displayEmail = value.displayEmail;
+	const names = value.names;
 	const emails = value.emails;
 
-	if (!isNonEmptyString(primaryEmail)) {
-		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置缺少 primaryEmail。`);
+	if (displayName !== undefined && !isNonEmptyString(displayName)) {
+		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 displayName 必须是非空字符串。`);
 	}
 
-	if (!Array.isArray(emails) || !emails.every(isNonEmptyString)) {
+	if (displayEmail !== undefined && !isNonEmptyString(displayEmail)) {
+		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 displayEmail 必须是非空字符串。`);
+	}
+
+	if (names !== undefined && (!Array.isArray(names) || !names.every(isNonEmptyString))) {
+		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 names 必须是字符串数组。`);
+	}
+
+	if (emails !== undefined && (!Array.isArray(emails) || !emails.every(isNonEmptyString))) {
 		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 emails 必须是字符串数组。`);
 	}
 
+	const normalizedNames = uniqueValues(Array.isArray(names) ? names.map(normalizeName) : []);
+	const normalizedEmails = uniqueValues(Array.isArray(emails) ? emails.map(normalizeEmail) : []);
+
+	if (normalizedNames.length === 0 && normalizedEmails.length === 0) {
+		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置必须包含 names 或 emails。`);
+	}
+
 	return {
-		primaryEmail: primaryEmail.trim(),
-		emails: uniqueEmails([primaryEmail, ...emails])
+		key: `author:${index + 1}`,
+		displayName: isNonEmptyString(displayName) ? normalizeName(displayName) : undefined,
+		displayEmail: isNonEmptyString(displayEmail) ? normalizeEmail(displayEmail) : undefined,
+		names: normalizedNames,
+		emails: normalizedEmails
 	};
 }
 
-function assertUniqueEmails(groups: AuthorAliasGroup[]): void {
+function assertUniqueMatchers(groups: AuthorAliasGroup[]): void {
+	const ownerByName = new Map<string, string>();
 	const ownerByEmail = new Map<string, string>();
 
 	for (const group of groups) {
+		for (const name of group.names) {
+			const key = normalizeName(name);
+			const owner = ownerByName.get(key);
+
+			if (owner) {
+				throw new AuthorAliasConfigError(`作者名称重复出现在多个作者合并组：${name}`);
+			}
+
+			ownerByName.set(key, group.key);
+		}
+
 		for (const email of group.emails) {
 			const key = normalizeEmail(email);
 			const owner = ownerByEmail.get(key);
@@ -121,21 +140,19 @@ function assertUniqueEmails(groups: AuthorAliasGroup[]): void {
 				throw new AuthorAliasConfigError(`邮箱重复出现在多个作者合并组：${email}`);
 			}
 
-			ownerByEmail.set(key, group.primaryEmail);
+			ownerByEmail.set(key, group.key);
 		}
 	}
 }
 
-function uniqueEmails(emails: string[]): string[] {
+function uniqueValues(values: string[]): string[] {
 	const seen = new Set<string>();
 	const result: string[] = [];
 
-	for (const email of emails) {
-		const key = normalizeEmail(email);
-
-		if (!seen.has(key)) {
-			seen.add(key);
-			result.push(key);
+	for (const value of values) {
+		if (!seen.has(value)) {
+			seen.add(value);
+			result.push(value);
 		}
 	}
 
@@ -144,6 +161,10 @@ function uniqueEmails(emails: string[]): string[] {
 
 function normalizeEmail(email: string): string {
 	return email.trim();
+}
+
+function normalizeName(value: string): string {
+	return value.trim();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

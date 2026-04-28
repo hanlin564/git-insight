@@ -1,6 +1,6 @@
 import type {CommitRecord} from '../git/types.js';
 import {matchesText} from '../utils/text.js';
-import type {AuthorAliasLookup} from './authorAliases.js';
+import {AuthorAliasConfigError, type AuthorAliasGroup, type AuthorAliasLookup} from './authorAliases.js';
 
 export type AuthorIdentityQuery = {
 	name?: string;
@@ -72,7 +72,10 @@ export function createAuthorIdentityResolver(
 				}
 
 				return resolved.isAliasGroup
-					&& resolved.searchEmails.some(value => normalizeEmail(value) === email);
+					&& (
+						resolved.searchNames.some(value => normalizeName(value) === name)
+						|| resolved.searchEmails.some(value => normalizeEmail(value) === email)
+					);
 			}
 
 			if (email) {
@@ -94,10 +97,17 @@ function buildIdentityGroups(
 ): Map<string, ResolvedAuthorIdentity> {
 	const signatures = collectSignatures(commits);
 	const union = new UnionFind();
+	const groupBySignature = new Map<string, AuthorAliasGroup>();
+	const signaturesByName = new Map<string, string[]>();
 	const signaturesByEmail = new Map<string, string[]>();
 
 	for (const signature of signatures.values()) {
 		union.add(signature.key);
+
+		const nameKey = normalizeName(signature.authorName);
+		const nameSignatures = signaturesByName.get(nameKey) ?? [];
+		nameSignatures.push(signature.key);
+		signaturesByName.set(nameKey, nameSignatures);
 
 		const emailKey = normalizeEmail(signature.authorEmail);
 		const emailSignatures = signaturesByEmail.get(emailKey) ?? [];
@@ -106,10 +116,24 @@ function buildIdentityGroups(
 	}
 
 	for (const group of aliases.groups) {
-		const groupSignatures = group.emails.flatMap(email => signaturesByEmail.get(normalizeEmail(email)) ?? []);
+		const groupSignatures = uniqueValues([
+			...group.names.flatMap(name => signaturesByName.get(normalizeName(name)) ?? []),
+			...group.emails.flatMap(email => signaturesByEmail.get(normalizeEmail(email)) ?? [])
+		]);
 
 		if (groupSignatures.length === 0) {
 			continue;
+		}
+
+		for (const signatureKey of groupSignatures) {
+			const existingGroup = groupBySignature.get(signatureKey);
+
+			if (existingGroup && existingGroup.key !== group.key) {
+				const signature = signatures.get(signatureKey);
+				throw new AuthorAliasConfigError(`作者签名同时匹配多个作者合并组：${formatSignature(signature)}`);
+			}
+
+			groupBySignature.set(signatureKey, group);
 		}
 
 		const [firstSignature, ...otherSignatures] = groupSignatures;
@@ -130,7 +154,7 @@ function buildIdentityGroups(
 	const identitiesBySignature = new Map<string, ResolvedAuthorIdentity>();
 
 	for (const groupSignatures of signaturesByRoot.values()) {
-		const identity = createGroupIdentity(groupSignatures, aliases);
+		const identity = createGroupIdentity(groupSignatures, groupBySignature);
 
 		for (const signature of groupSignatures) {
 			identitiesBySignature.set(signature.key, identity);
@@ -166,35 +190,27 @@ function collectSignatures(commits: CommitRecord[]): Map<string, AuthorSignature
 
 function createGroupIdentity(
 	signatures: AuthorSignature[],
-	aliases: AuthorAliasLookup
+	groupBySignature: Map<string, AuthorAliasGroup>
 ): ResolvedAuthorIdentity {
-	const searchNames = uniqueValues(signatures.map(signature => signature.authorName));
+	const aliasGroup = getAliasGroup(signatures, groupBySignature);
+	const aliasNames = aliasGroup ? aliasGroup.names : [];
+	const displayNames = aliasGroup?.displayName ? [aliasGroup.displayName] : [];
 	const signatureEmails = uniqueValues(signatures.map(signature => signature.authorEmail));
-	const signatureEmailSet = new Set(signatureEmails.map(normalizeEmail));
-	const aliasEmails: string[] = [];
-	let primaryEmail: string | undefined;
-
-	for (const group of aliases.groups) {
-		if (!group.emails.some(email => signatureEmailSet.has(normalizeEmail(email)))) {
-			continue;
-		}
-
-		primaryEmail ??= group.primaryEmail;
-		aliasEmails.push(...group.emails);
-	}
-
+	const aliasEmails = aliasGroup ? aliasGroup.emails : [];
+	const displayEmails = aliasGroup?.displayEmail ? [aliasGroup.displayEmail] : [];
+	const searchNames = uniqueValues([...signatures.map(signature => signature.authorName), ...aliasNames, ...displayNames]);
 	const searchEmails = uniqueValues([...signatureEmails, ...aliasEmails]);
-	const authorName = chooseMostUsedName(signatures);
-	const authorEmail = primaryEmail ?? chooseMostUsedValue(signatures, signature => signature.authorEmail);
+	const authorName = aliasGroup?.displayName ?? chooseMostUsedName(signatures);
+	const authorEmail = aliasGroup?.displayEmail ?? chooseMostUsedValue(signatures, signature => signature.authorEmail);
 
 	return {
 		authorName,
 		authorEmail,
-		key: getResolvedAuthorKey(signatures, authorName, authorEmail, primaryEmail),
+		key: getResolvedAuthorKey(signatures, authorName, authorEmail, aliasGroup),
 		searchNames,
-		searchEmails,
+		searchEmails: uniqueValues([...searchEmails, ...displayEmails]),
 		signatureKeys: signatures.map(signature => signature.key),
-		isAliasGroup: Boolean(primaryEmail)
+		isAliasGroup: Boolean(aliasGroup)
 	};
 }
 
@@ -217,13 +233,44 @@ function getResolvedAuthorKey(
 	signatures: AuthorSignature[],
 	authorName: string,
 	authorEmail: string,
-	primaryEmail?: string
+	aliasGroup?: AuthorAliasGroup
 ): string {
-	if (primaryEmail) {
-		return `alias:${normalizeEmail(primaryEmail)}`;
+	if (aliasGroup) {
+		return `alias:${aliasGroup.key}`;
 	}
 
 	return signatures[0]?.key ?? getSignatureKey(authorName, authorEmail);
+}
+
+function getAliasGroup(
+	signatures: AuthorSignature[],
+	groupBySignature: Map<string, AuthorAliasGroup>
+): AuthorAliasGroup | undefined {
+	let aliasGroup: AuthorAliasGroup | undefined;
+
+	for (const signature of signatures) {
+		const currentGroup = groupBySignature.get(signature.key);
+
+		if (!currentGroup) {
+			continue;
+		}
+
+		if (aliasGroup && aliasGroup.key !== currentGroup.key) {
+			throw new AuthorAliasConfigError(`作者合并组解析冲突：${formatSignature(signature)}`);
+		}
+
+		aliasGroup = currentGroup;
+	}
+
+	return aliasGroup;
+}
+
+function formatSignature(signature?: AuthorSignature): string {
+	if (!signature) {
+		return '未知作者';
+	}
+
+	return `${signature.authorName} <${signature.authorEmail}>`;
 }
 
 function chooseMostUsedValue(signatures: AuthorSignature[], getValue: (signature: AuthorSignature) => string): string {
