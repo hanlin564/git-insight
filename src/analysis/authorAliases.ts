@@ -1,4 +1,5 @@
 import {readFile} from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 
 export type AuthorAliasGroup = {
@@ -27,14 +28,13 @@ type RawAuthorAliasConfig = {
 export async function loadAuthorAliasLookup(
 	repositoryPath: string
 ): Promise<AuthorAliasLookup> {
-	const resolvedPath = path.join(repositoryPath, '.git-insight.json');
-	const content = await readConfigFile(resolvedPath);
+	const config = await readAuthorAliasConfig(repositoryPath);
 
-	if (!content) {
+	if (!config) {
 		return createAuthorAliasLookup([]);
 	}
 
-	return createAuthorAliasLookup(parseAuthorAliasConfig(content, resolvedPath));
+	return createAuthorAliasLookup(parseAuthorAliasConfig(config.content, config.filePath));
 }
 
 function createAuthorAliasLookup(groups: AuthorAliasGroup[]): AuthorAliasLookup {
@@ -53,6 +53,23 @@ async function readConfigFile(filePath: string): Promise<string | undefined> {
 
 		throw error;
 	}
+}
+
+async function readAuthorAliasConfig(repositoryPath: string): Promise<{content: string; filePath: string} | undefined> {
+	const configPaths = [
+		path.join(repositoryPath, '.git-insight.json'),
+		path.join(os.homedir(), '.git-insight.json')
+	];
+
+	for (const filePath of configPaths) {
+		const content = await readConfigFile(filePath);
+
+		if (content !== undefined) {
+			return {content, filePath};
+		}
+	}
+
+	return undefined;
 }
 
 function parseAuthorAliasConfig(content: string, filePath: string): AuthorAliasGroup[] {

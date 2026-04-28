@@ -18,7 +18,7 @@ export function App({options, result}: AppProps) {
 			<Box flexDirection="column">
 				<Text color="green" bold>Git Insight</Text>
 				<Text color="red">{result.error}</Text>
-				<Text color="gray">请检查 --repo、--branch，或仓库根目录的 .git-insight.json。</Text>
+				<Text color="gray">请检查 --repo、--branch，或项目/全局 .git-insight.json。</Text>
 			</Box>
 		);
 	}

@@ -130,7 +130,7 @@ npm run dev -- --repo /path/to/repo --no-heatmap
 - 同名但邮箱不同，例如 `Ray-ux <work@example.com>` 和 `Ray-ux <personal@example.com>`。
 - 同邮箱但作者名不同，例如 `Ray <ray@example.com>` 和 `Ray-ux <ray@example.com>`。
 
-如果需要合并不同 Git 作者签名，可以在被分析仓库根目录创建 `.git-insight.json` 配置合并关系。文件不存在时不做跨签名合并；文件存在但 JSON 格式错误或配置结构不符合规则时会输出错误。
+如果需要合并不同 Git 作者签名，可以创建 `.git-insight.json` 配置合并关系。工具会优先读取被分析仓库根目录下的 `.git-insight.json`；如果项目级配置不存在，再读取 `~/.git-insight.json`。两者同时存在时，项目级配置整文件覆盖全局配置，不做合并。两个位置都不存在时不做跨签名合并；实际读取到的文件 JSON 格式错误或配置结构不符合规则时会输出错误。
 
 配置示例：
 
