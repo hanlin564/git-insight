@@ -2,6 +2,8 @@ import type {CommitRecord} from './types.js';
 
 type MutableCommit = CommitRecord;
 
+const commitFieldSeparator = '\x1f';
+
 const parseNumstatValue = (value: string): number => {
 	if (value === '-') {
 		return 0;
@@ -12,7 +14,7 @@ const parseNumstatValue = (value: string): number => {
 
 const parseCommitHeader = (line: string): MutableCommit | undefined => {
 	const raw = line.replace('__COMMIT__', '');
-	const [hash, authorName, authorEmail, date] = raw.split('|');
+	const [hash, authorName, authorEmail, date] = raw.split(commitFieldSeparator);
 
 	if (!hash || !authorName || !date) {
 		return undefined;

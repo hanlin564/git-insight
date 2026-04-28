@@ -55,7 +55,7 @@ export async function getLogWithNumstat(repoPath: string, range: DateRange, bran
 			`--until=${range.endDate} 23:59:59`,
 			'--numstat',
 			'--date=short',
-			'--pretty=format:__COMMIT__%H|%an|%ae|%ad'
+			'--pretty=format:__COMMIT__%H%x1f%an%x1f%ae%x1f%ad'
 		]);
 	} catch (error) {
 		if (isEmptyRepositoryLogError(error)) {
