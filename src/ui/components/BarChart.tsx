@@ -5,8 +5,11 @@ import {getDisplayWidth, padEndSafe} from '../../utils/text.js';
 
 export type BarChartItem = {
 	key?: string;
+	rank?: number;
 	label: string;
-	value: number;
+	value?: number;
+	isGap?: boolean;
+	isHighlighted?: boolean;
 };
 
 type BarChartProps = {
@@ -28,8 +31,9 @@ export function BarChart({
 	barGap = 1,
 	barChar = '█'
 }: BarChartProps) {
-	const max = Math.max(...items.map(item => item.value), 0);
-	const labelWidth = Math.min(Math.max(...items.map(item => getDisplayWidth(item.label)), 0), 32);
+	const max = Math.max(...items.map(item => item.value ?? 0), 0);
+	const labelWidth = Math.min(Math.max(...items.filter(item => !item.isGap).map(item => getDisplayWidth(item.label)), 0), 32);
+	const rankWidth = Math.max(...items.map(item => item.rank ? getDisplayWidth(`#${item.rank}`) : 0), 0);
 	const barPadding = ' '.repeat(barGap);
 
 	if (items.length === 0) {
@@ -41,13 +45,27 @@ export function BarChart({
 			{items.map((item, index) => {
 				const key = item.key ?? item.label;
 				const marginBottom = index === items.length - 1 ? 0 : itemGap;
+				const rankLabel = item.rank ? padEndSafe(`#${item.rank}`, rankWidth) : ' '.repeat(rankWidth);
+				const rankPadding = rankWidth > 0 ? ' ' : '';
+
+				if (item.isGap) {
+					return (
+						<Box key={key} marginBottom={marginBottom}>
+							<Text color="gray">{rankLabel}{rankPadding}...</Text>
+						</Box>
+					);
+				}
+
+				const value = item.value ?? 0;
+				const rowColor = item.isHighlighted ? 'cyan' : undefined;
 
 				return (
 					<Box key={key} marginBottom={marginBottom}>
-						<Text>
+						<Text color={rowColor} bold={item.isHighlighted}>
+							{rankLabel}{rankPadding}
 							{padEndSafe(item.label, labelWidth)}{barPadding}
-							<Text color={color}>{getBar(item.value, max, width, barChar)}</Text>{barPadding}
-							{formatNumber(item.value)}
+							<Text color={item.isHighlighted ? 'cyan' : color}>{getBar(value, max, width, barChar)}</Text>{barPadding}
+							{formatNumber(value)}
 						</Text>
 					</Box>
 				);

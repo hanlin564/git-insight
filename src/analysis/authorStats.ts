@@ -10,10 +10,6 @@ export function collectAuthorStats(
 	const stats = new Map<string, AuthorStat>();
 
 	for (const commit of commits) {
-		if (currentUser && !authorResolver.matchesIdentity(commit, currentUser)) {
-			continue;
-		}
-
 		if (!authorResolver.matches(commit, authorQuery)) {
 			continue;
 		}
@@ -28,6 +24,10 @@ export function collectAuthorStats(
 			deletions: 0,
 			changedLines: 0
 		};
+
+		if (currentUser && authorResolver.matchesIdentity(commit, currentUser)) {
+			current.isCurrentUser = true;
+		}
 
 		current.commitCount += 1;
 		current.additions += commit.additions;

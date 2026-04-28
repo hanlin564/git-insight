@@ -226,7 +226,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--branch <name>', '指定分析分支，默认当前分支')
 		.option('--repo <path>', '指定 Git 仓库目录，默认当前目录', process.cwd())
 		.option('--author <query>', '只展示匹配作者名称或邮箱的数据')
-		.option('--me', '只展示当前 Git 配置用户的数据')
+		.option('--me', '聚焦当前 Git 配置用户的数据和排名')
 		.option('--no-heatmap', '关闭提交热力图')
 		.option('--no-ranking', '关闭作者排名')
 		.addHelpText('after', `
@@ -240,7 +240,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 作者过滤:
   --author 和 --me 只能选择一个。
   --author 会匹配作者名称、邮箱和配置合并后的展示名称/邮箱。
-  --me 使用当前仓库 Git 配置中的 user.name / user.email。
+  --me 使用当前仓库 Git 配置中的 user.name / user.email；热力图展示本人，排行榜展示全仓库排名中的本人位置。
 
 显示开关:
   默认显示提交热力图和作者排名。

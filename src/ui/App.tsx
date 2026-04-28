@@ -37,7 +37,7 @@ export function App({options, result}: AppProps) {
 			<Text>Branch: <Text color="cyan">{stats.branchName}</Text></Text>
 			<Text>Range: {stats.range.label}</Text>
 			{options.author && <Text>Author filter: {options.author}</Text>}
-			{options.me && <Text>Author filter: {formatGitUser(stats.currentGitUser)}</Text>}
+			{options.me && <Text>Current user: {formatGitUser(stats.currentGitUser)}</Text>}
 			<Text> </Text>
 
 			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}
@@ -49,7 +49,7 @@ export function App({options, result}: AppProps) {
 				</Section>
 			)}
 
-			{options.ranking && hasAuthorData && <AuthorRanking stats={stats} />}
+			{options.ranking && hasAuthorData && <AuthorRanking stats={stats} showCurrentUserContext={options.me} />}
 		</Box>
 	);
 }
