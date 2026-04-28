@@ -61,7 +61,13 @@ error: unknown option '--since'
 - 将 pretty format 分隔符改为更不易冲突的控制字符，例如 `%x1f` 字段分隔、`%x1e` 记录分隔。
 - 为日志解析补充针对特殊作者名的单元测试。
 
-## 3. 构建不会清理旧产物，dist 中残留已不存在模块
+## 3. 构建不会清理旧产物，dist 中残留已不存在模块（已完成）
+
+### 处理结果
+
+- 已新增 `npm run clean`，使用 Node 内置 `fs.rmSync` 清理 `dist` 生成目录。
+- 已将 `npm run build` 调整为先执行 `npm run clean`，再执行 `tsc`。
+- 已通过重新构建确认 `dist/analysis/branchStats.*` 旧产物不再生成。
 
 ### 现象
 
