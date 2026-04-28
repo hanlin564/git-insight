@@ -35,20 +35,20 @@ const parsePositiveInteger = (value: string, optionName: string): number => {
 };
 
 const parseSinceRange = (value: string): DateRange => {
-	const since = parsePositiveInteger(value, '--since');
-	if (since > MAX_SINCE_DAYS) {
-		throw new Error(`--since 最大支持 ${MAX_SINCE_DAYS} 天。`);
+	const last = parsePositiveInteger(value, '--last');
+	if (last > MAX_SINCE_DAYS) {
+		throw new Error(`--last 最大支持 ${MAX_SINCE_DAYS} 天。`);
 	}
 
 	const end = startOfLocalDay(new Date());
-	const start = addDays(end, -(since - 1));
+	const start = addDays(end, -(last - 1));
 
 	return {
 		kind: 'since',
 		startDate: formatDate(start),
 		endDate: formatDate(end),
-		label: `last ${since} days`,
-		dayCount: since
+		label: `last ${last} days`,
+		dayCount: last
 	};
 };
 
@@ -87,21 +87,21 @@ const parseMonthRange = (value: string): DateRange => {
 };
 
 const parseRangeRequest = (values: {
-	since?: string;
+	last?: string;
 	year?: string;
 	month?: string;
 	from?: string;
 	to?: string;
 }): RangeRequest => {
-	const fixedValues = [values.since, values.year, values.month].filter(value => value !== undefined);
+	const fixedValues = [values.last, values.year, values.month].filter(value => value !== undefined);
 	const hasCustomRange = values.from !== undefined || values.to !== undefined;
 
 	if (fixedValues.length > 1) {
-		throw new Error('--since、--year、--month 只能指定一个。');
+		throw new Error('--last、--year、--month 只能指定一个。');
 	}
 
 	if (hasCustomRange && fixedValues.length > 0) {
-		throw new Error('--from/--to 不能和 --since、--year、--month 同时使用。');
+		throw new Error('--from/--to 不能和 --last、--year、--month 同时使用。');
 	}
 
 	if (hasCustomRange) {
@@ -123,7 +123,7 @@ const parseRangeRequest = (values: {
 		return {kind: 'fixed', range: parseMonthRange(String(values.month))};
 	}
 
-	return {kind: 'fixed', range: parseSinceRange(String(values.since ?? '365'))};
+	return {kind: 'fixed', range: parseSinceRange(String(values.last ?? '365'))};
 };
 
 export function createCustomDateRange(request: Extract<RangeRequest, {kind: 'custom'}>, fallbackStartDate?: string): DateRange {
@@ -218,7 +218,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.name('git-insight')
 		.description('一次性输出型 Git 仓库分析工具')
 		.helpOption('-h, --help', '显示帮助信息')
-		.option('--since <days>', '统计最近 N 天数据，默认 365，最大 3650')
+		.option('--last <days>', '统计最近 N 天数据，默认 365，最大 3650')
 		.option('--year <yyyy>', '统计指定年份数据')
 		.option('--month <yyyy-MM>', '统计指定月份数据')
 		.option('--from <date>', '统计起始时间，支持 yyyy、yyyy-MM、yyyy-MM-dd')
@@ -231,8 +231,8 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--no-ranking', '关闭作者排名')
 		.addHelpText('after', `
 时间范围:
-  默认使用 --since 365。
-  --since、--year、--month、--from/--to 只能选择一种时间范围。
+  默认使用 --last 365。
+  --last、--year、--month、--from/--to 只能选择一种时间范围。
   --from 和 --to 可以单独使用；同时使用时必须采用相同格式。
   只有 --from 时默认统计到今天，只有 --to 时默认从当前分析分支的第一个提交开始。
   所有时间范围最大支持 ${MAX_SINCE_DAYS} 天。
@@ -250,7 +250,7 @@ export function parseArgs(argv = process.argv): CliOptions {
   git-insight --help
   git-insight
   git-insight --repo /path/to/repo
-  git-insight --repo /path/to/repo --since 90
+  git-insight --repo /path/to/repo --last 90
   git-insight --repo /path/to/repo --year 2025
   git-insight --repo /path/to/repo --month 2025-04
   git-insight --repo /path/to/repo --from 2024 --to 2025
