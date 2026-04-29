@@ -24,6 +24,7 @@ export type AuthorStat = {
 	additions: number;
 	deletions: number;
 	changedLines: number;
+	changedLinesPerDay: number;
 	isCurrentUser?: boolean;
 };
 

@@ -4,10 +4,12 @@ import type {AuthorIdentityQuery, AuthorIdentityResolver} from './authorIdentity
 export function collectAuthorStats(
 	commits: CommitRecord[],
 	authorResolver: AuthorIdentityResolver,
+	rangeDayCount: number,
 	authorQuery?: string,
 	currentUser?: AuthorIdentityQuery
 ): AuthorStat[] {
 	const stats = new Map<string, AuthorStat>();
+	const days = Math.max(rangeDayCount, 1);
 
 	for (const commit of commits) {
 		if (!authorResolver.matches(commit, authorQuery)) {
@@ -22,7 +24,8 @@ export function collectAuthorStats(
 			commitCount: 0,
 			additions: 0,
 			deletions: 0,
-			changedLines: 0
+			changedLines: 0,
+			changedLinesPerDay: 0
 		};
 
 		if (currentUser && authorResolver.matchesIdentity(commit, currentUser)) {
@@ -33,6 +36,7 @@ export function collectAuthorStats(
 		current.additions += commit.additions;
 		current.deletions += commit.deletions;
 		current.changedLines = current.additions + current.deletions;
+		current.changedLinesPerDay = current.changedLines / days;
 		stats.set(key, current);
 	}
 

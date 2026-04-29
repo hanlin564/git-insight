@@ -117,7 +117,7 @@ npm run dev -- --repo /path/to/repo --no-heatmap
 工具会输出两类核心信息：
 
 - 仓库提交热力图：GitHub 风格绿色分层，按周排列，纵向为周一到周日。
-- 作者提交量排名：按提交次数和变更行数分别排名，变更行数为 additions + deletions。
+- 作者排名：按每日代码改动增速、提交次数和变更行数分别排名；每日代码改动增速为 `(additions + deletions) / 统计天数`，变更行数为 `additions + deletions`。
 
 默认分析当前分支，并用一张热力图展示当前统计范围内的提交频率；如果需要只查看当前 Git 配置用户，可以传入 `--me`。
 

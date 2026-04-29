@@ -49,7 +49,7 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 			return {ok: false, error: '未读取到当前 Git 配置用户，请先配置 user.name 或 user.email。', repositoryPath: options.repo};
 		}
 
-		const authorStats = collectAuthorStats(commits, authorResolver, options.author, currentGitUser);
+		const authorStats = collectAuthorStats(commits, authorResolver, range.dayCount, options.author, currentGitUser);
 
 		return {
 			ok: true,

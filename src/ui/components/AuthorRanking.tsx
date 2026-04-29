@@ -23,17 +23,28 @@ type RankingView = {
 };
 
 export function AuthorRanking({stats, showCurrentUserContext = false}: AuthorRankingProps) {
+	const changedLinesPerDayRanking = createRankingView(
+		stats.authorStats,
+		author => author.changedLinesPerDay,
+		showCurrentUserContext,
+		(a, b) => b.changedLines - a.changedLines || b.commitCount - a.commitCount
+	);
 	const commitRanking = createRankingView(stats.authorStats, author => author.commitCount, showCurrentUserContext);
 	const changedLinesRanking = createRankingView(stats.authorStats, author => author.changedLines, showCurrentUserContext);
 
 	return (
 		<Box flexDirection="column">
-			<Section title="提交数排行榜">
+			<Section title="每日代码改动增速排行榜 (行/天)">
+				{showCurrentUserContext && <CurrentRankText ranking={changedLinesPerDayRanking} />}
+				<BarChart items={changedLinesPerDayRanking.items} barChar="━" />
+			</Section>
+
+			<Section title="提交数排行榜 (次)">
 				{showCurrentUserContext && <CurrentRankText ranking={commitRanking} />}
 				<BarChart items={commitRanking.items} barChar="━" />
 			</Section>
 
-			<Section title="代码改动排行榜">
+			<Section title="代码改动排行榜 (行)">
 				{showCurrentUserContext && <CurrentRankText ranking={changedLinesRanking} />}
 				<BarChart items={changedLinesRanking.items} barChar="━" />
 			</Section>
@@ -52,10 +63,11 @@ function CurrentRankText({ranking}: {ranking: RankingView}) {
 function createRankingView(
 	authors: AuthorStat[],
 	getValue: (author: AuthorStat) => number,
-	showCurrentUserContext: boolean
+	showCurrentUserContext: boolean,
+	compareTies: (a: AuthorStat, b: AuthorStat) => number = () => 0
 ): RankingView {
 	const rankedAuthors = [...authors]
-		.sort((a, b) => getValue(b) - getValue(a))
+		.sort((a, b) => getValue(b) - getValue(a) || compareTies(a, b))
 		.map((author, index) => ({
 			author,
 			rank: index + 1,
