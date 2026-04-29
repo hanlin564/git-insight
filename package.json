@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "tsx src/index.tsx",
+    "test": "node test/run-tests.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', {recursive: true, force: true})\"",
     "build": "npm run clean && tsc && npm run chmod:bin",
     "chmod:bin": "node -e \"require('node:fs').chmodSync('dist/index.js', 0o755)\"",

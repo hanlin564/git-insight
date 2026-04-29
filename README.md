@@ -29,6 +29,25 @@ npm run build
 node dist/index.js --repo /path/to/repo
 ```
 
+## 测试
+
+运行自动化测试：
+
+```bash
+npm test
+```
+
+测试使用 Node.js 内置 test runner，并通过 `tsx` 执行 TypeScript 测试文件。涉及 Git 行为的 CLI 端到端测试会在系统临时目录下动态创建 Git 仓库，模拟提交、分支、作者配置和作者合并配置等场景，不依赖本机固定仓库。
+
+涉及类型、模块导入或 CLI 行为的修改，提交前建议至少运行：
+
+```bash
+npm test
+npm run build
+```
+
+测试案例覆盖范围和预期结果见 `docs/test.md`。
+
 ## 常用参数
 
 ```bash

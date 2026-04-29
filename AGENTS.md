@@ -31,14 +31,22 @@
 
 ## 测试规范
 
-当前尚未配置测试框架或 `npm test` 脚本。修改后先通过构建和有针对性的手动运行验证，例如：
+项目已配置基于 Node.js 内置 test runner 和 `tsx` 的自动化测试。运行：
 
 ```bash
-npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90
-npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Erp --last 3650
+npm test
 ```
 
-后续新增测试时，纯解析和统计逻辑优先使用就近的 `*.test.ts` 文件；UI 测试应聚焦关键渲染状态和空数据、错误数据等边界场景。
+涉及 Git 行为的 CLI 端到端测试应使用 `test/helpers/tempGitRepository.ts` 临时创建 Git 仓库来模拟提交、分支、作者和配置等场景，不要依赖本机固定仓库。CLI 运行应复用 `test/helpers/cli.ts`，避免被本机全局 Git 配置或全局 `.git-insight.json` 污染。
+
+纯解析和统计逻辑优先使用就近的 `*.test.ts` 单元测试；UI 测试应聚焦关键渲染状态和空数据、错误数据等边界场景。新增或调整测试案例时，同步更新 `docs/test.md`，说明命令或被测函数、模拟场景和预期结果。
+
+涉及类型、模块导入或 CLI 行为的修改，提交前至少运行：
+
+```bash
+npm test
+npm run build
+```
 
 ## 提交与 Pull Request 规范
 
