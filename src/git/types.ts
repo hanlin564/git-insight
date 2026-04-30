@@ -8,6 +8,12 @@ export type GitUserIdentity = {
 	email?: string;
 };
 
+export type LocalBranchRef = {
+	name: string;
+	ref: string;
+	latestCommitDate?: string;
+};
+
 export type CommitRecord = {
 	hash: string;
 	authorName: string;
@@ -26,6 +32,19 @@ export type AuthorStat = {
 	changedLines: number;
 	changedLinesPerDay: number;
 	isCurrentUser?: boolean;
+};
+
+export type BranchSummary = {
+	branchName: string;
+	latestCommitDate?: string;
+	isCurrentBranch?: boolean;
+};
+
+export type BranchGroups = {
+	active: BranchSummary[];
+	stale: BranchSummary[];
+	defaultBranchName?: string;
+	staleThresholdDate: string;
 };
 
 export type HeatmapGranularity = 'daily' | 'monthly';

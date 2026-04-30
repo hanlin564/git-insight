@@ -10,6 +10,7 @@ test('parseArgs 使用默认范围和显示开关', () => {
 	assert.equal(options.rangeRequest.kind, 'fixed');
 	assert.equal(options.heatmap, true);
 	assert.equal(options.ranking, true);
+	assert.equal(options.branchActivity, true);
 	assert.equal(options.me, undefined);
 	assert.equal(options.rangeRequest.range.kind, 'since');
 	assert.equal(options.rangeRequest.range.label, 'last 365 days');
@@ -47,7 +48,8 @@ test('parseArgs 解析仓库、作者、分支和显示关闭参数', () => {
 		'--author',
 		'alice',
 		'--no-heatmap',
-		'--no-ranking'
+		'--no-ranking',
+		'--no-branch-activity'
 	));
 
 	assert.match(options.repo, /fixtures\/repo$/);
@@ -55,6 +57,7 @@ test('parseArgs 解析仓库、作者、分支和显示关闭参数', () => {
 	assert.equal(options.author, 'alice');
 	assert.equal(options.heatmap, false);
 	assert.equal(options.ranking, false);
+	assert.equal(options.branchActivity, false);
 });
 
 test('parseArgs 拒绝非法日期和互斥参数', () => {

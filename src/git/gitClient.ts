@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {execa} from 'execa';
 import type {DateRange} from '../utils/date.js';
-import type {GitUserIdentity, RepositoryTarget} from './types.js';
+import type {GitUserIdentity, LocalBranchRef, RepositoryTarget} from './types.js';
 
 export class GitRepositoryError extends Error {
 	constructor(repoPath: string) {
@@ -104,6 +104,38 @@ export async function getFirstCommitDate(repoPath: string, branchRef: string): P
 export async function getCurrentBranchName(repoPath: string): Promise<string> {
 	const branchName = (await runGit(repoPath, ['branch', '--show-current'])).trim();
 	return branchName || 'HEAD';
+}
+
+export async function getLocalBranches(repoPath: string): Promise<LocalBranchRef[]> {
+	const output = await runGit(repoPath, [
+		'for-each-ref',
+		'--format=%(refname:short)%09%(objectname)%09%(committerdate:short)',
+		'refs/heads'
+	]);
+
+	return output
+		.split('\n')
+		.map((line): LocalBranchRef | undefined => {
+			const [name, ref, latestCommitDate] = line.split('\t');
+			return name && ref
+				? {name, ref, ...(latestCommitDate ? {latestCommitDate} : {})}
+				: undefined;
+		})
+		.filter((branch): branch is LocalBranchRef => branch !== undefined);
+}
+
+export async function getRemoteDefaultBranchName(repoPath: string): Promise<string | undefined> {
+	try {
+		const branchName = (await runGit(repoPath, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])).trim();
+
+		if (!branchName) {
+			return undefined;
+		}
+
+		return branchName.replace(/^origin\//, '');
+	} catch {
+		return undefined;
+	}
 }
 
 async function resolveBranchRef(repoPath: string, branchName: string): Promise<string> {

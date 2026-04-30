@@ -23,6 +23,7 @@ export type CliOptions = {
 	me: boolean;
 	heatmap: boolean;
 	ranking: boolean;
+	branchActivity: boolean;
 };
 
 const parsePositiveInteger = (value: string, optionName: string): number => {
@@ -229,6 +230,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--me', '聚焦当前 Git 配置用户的数据和排名')
 		.option('--no-heatmap', '关闭提交热力图')
 		.option('--no-ranking', '关闭作者排名')
+		.option('--no-branch-activity', '关闭活跃/不活跃分支')
 		.addHelpText('after', `
 时间范围:
   默认使用 --last 365。
@@ -243,8 +245,9 @@ export function parseArgs(argv = process.argv): CliOptions {
   --me 使用当前仓库 Git 配置中的 user.name / user.email；热力图展示本人，排行榜展示全仓库排名中的本人位置。
 
 显示开关:
-  默认显示提交热力图和作者排名。
-  --no-heatmap 可关闭热力图，--no-ranking 可关闭作者排名。
+  默认显示提交热力图、作者排名和活跃/不活跃分支。
+  --no-heatmap 可关闭热力图，--no-ranking 可关闭作者排名，--no-branch-activity 可关闭活跃/不活跃分支。
+  使用 --branch 指定单个分析分支时，不展示活跃/不活跃分支。
 
 示例:
   git-insight --help
@@ -273,6 +276,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		author: values.author,
 		me: values.me,
 		heatmap: values.heatmap,
-		ranking: values.ranking
+		ranking: values.ranking,
+		branchActivity: values.branchActivity
 	};
 }

@@ -204,6 +204,68 @@ test('支持 --branch 分析指定分支，而不是当前分支', async t => {
 	assert.match(result.output, /当前分支:\s+main/);
 	assert.match(result.output, /分析分支:\s+feature\/report/);
 	assert.match(result.output, /Branch User/);
+	assert.doesNotMatch(result.output, /^活跃分支$/m);
+	assert.doesNotMatch(result.output, /^不活跃分支$/m);
+});
+
+test('未指定 --branch 时展示活跃和不活跃分支', async t => {
+	const repo = await createTempGitRepository(t);
+	const recentDate = formatDate(addDays(startOfLocalDay(new Date()), -10));
+	const staleDate = formatDate(addDays(startOfLocalDay(new Date()), -120));
+	await repo.commitFile({
+		date: recentDate,
+		message: 'main 提交',
+		filePath: 'main.txt',
+		content: 'main\n'
+	});
+	await repo.createBranch('feature/active');
+	await repo.commitFile({
+		date: recentDate,
+		message: '活跃分支提交',
+		filePath: 'feature-a.txt',
+		content: 'a\n'
+	});
+	await repo.checkout('main');
+	await repo.createBranch('feature/stale');
+	await repo.commitFile({
+		date: staleDate,
+		message: '不活跃分支提交',
+		filePath: 'feature-stale.txt',
+		content: 'stale\n'
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--last',
+		'3650',
+		'--no-heatmap'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, /^活跃分支$/m);
+	assert.match(result.output, new RegExp(`feature/active\\s+${escapeRegExp(recentDate)}`));
+	assert.match(result.output, /^不活跃分支$/m);
+	assert.match(result.output, new RegExp(`当前 feature/stale\\s+${escapeRegExp(staleDate)}`));
+});
+
+test('支持 --no-branch-activity 关闭活跃和不活跃分支', async t => {
+	const repo = await createRepositoryWithHistory(t);
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--from',
+		'2025-04-01',
+		'--to',
+		'2025-04-30',
+		'--no-heatmap',
+		'--no-branch-activity'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.doesNotMatch(result.output, /^活跃分支$/m);
+	assert.doesNotMatch(result.output, /^不活跃分支$/m);
 });
 
 test('支持 detached HEAD 状态下分析当前提交', async t => {

@@ -1,5 +1,5 @@
 import {createCustomDateRange, type CliOptions} from '../cli/parseArgs.js';
-import type {AuthorStat, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
+import type {AuthorStat, BranchGroups, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
 import {
 	createRepositoryTarget,
 	getCurrentBranchName,
@@ -15,6 +15,7 @@ import {parseGitLogWithNumstat} from '../git/gitLogParser.js';
 import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js';
 import {createAuthorIdentityResolver} from './authorIdentity.js';
 import {collectAuthorStats, topAuthorsByChangedLines, topAuthorsByCommits} from './authorStats.js';
+import {collectBranchGroups} from './branchActivityStats.js';
 import {collectContributionHeatmap, type ContributionHeatmapStat} from './heatmapStats.js';
 
 const DEFAULT_RANKING_LIMIT = 10;
@@ -26,6 +27,7 @@ export type RepositoryStats = {
 	topByCommits: AuthorStat[];
 	topByChangedLines: AuthorStat[];
 	heatmap?: ContributionHeatmapStat;
+	branchGroups?: BranchGroups;
 	currentGitUser?: GitUserIdentity;
 	currentBranchName: string;
 	analysisBranchName: string;
@@ -53,6 +55,9 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 		}
 
 		const authorStats = collectAuthorStats(commits, authorResolver, range.dayCount, options.author, currentGitUser);
+		const branchGroups = options.branchActivity && !options.branch
+			? await collectBranchGroups(repository.path, currentBranchName)
+			: undefined;
 
 		return {
 			ok: true,
@@ -65,6 +70,7 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				heatmap: options.heatmap
 					? collectContributionHeatmap(commits, range, authorResolver, options.author, currentGitUser)
 					: undefined,
+				branchGroups,
 				currentGitUser,
 				currentBranchName,
 				analysisBranchName: branch.name,

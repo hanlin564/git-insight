@@ -6,6 +6,7 @@ import type {GitUserIdentity} from '../git/types.js';
 import {Section} from './components/Section.js';
 import {ContributionHeatmap} from './components/ContributionHeatmap.js';
 import {AuthorRanking} from './components/AuthorRanking.js';
+import {BranchActivity} from './components/BranchActivity.js';
 
 type AppProps = {
 	options: CliOptions;
@@ -48,6 +49,10 @@ export function App({options, result}: AppProps) {
 					<Text color="gray">{heatmapScope}</Text>
 					<ContributionHeatmap heatmap={stats.heatmap} />
 				</Section>
+			)}
+
+			{options.branchActivity && !options.branch && stats.branchGroups && (
+				<BranchActivity groups={stats.branchGroups} />
 			)}
 
 			{options.ranking && hasAuthorData && <AuthorRanking stats={stats} showCurrentUserContext={options.me} />}
