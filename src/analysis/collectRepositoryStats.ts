@@ -1,5 +1,7 @@
 import {createCustomDateRange, type CliOptions} from '../cli/parseArgs.js';
+import {GitInsightConfigError} from '../config/gitInsightConfig.js';
 import type {AuthorStat, BranchGroups, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
+import {getMessages} from '../i18n.js';
 import {
 	createRepositoryTarget,
 	getCurrentBranchName,
@@ -39,6 +41,8 @@ export type RepositoryStatsResult =
 	| {ok: false; error: string; repositoryPath: string};
 
 export async function collectRepositoryStats(options: CliOptions): Promise<RepositoryStatsResult> {
+	const t = getMessages(options.language);
+
 	try {
 		const repository = await createRepositoryTarget(options.repo);
 		const currentBranchName = await getCurrentBranchName(repository.path);
@@ -46,12 +50,12 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 		const range = await resolveDateRange(repository.path, branch.ref, options);
 		const logOutput = branch.ref ? await getLogWithNumstat(repository.path, range, branch.ref) : '';
 		const commits = parseGitLogWithNumstat(logOutput);
-		const authorAliases = await loadAuthorAliasLookup(repository.path);
-		const authorResolver = createAuthorIdentityResolver(commits, authorAliases);
+		const authorAliases = await loadAuthorAliasLookup(repository.path, options.language);
+		const authorResolver = createAuthorIdentityResolver(commits, authorAliases, options.language);
 		const currentGitUser = options.me ? await getCurrentGitUser(repository.path) : undefined;
 
 		if (options.me && !currentGitUser) {
-			return {ok: false, error: '未读取到当前 Git 配置用户，请先配置 user.name 或 user.email。', repositoryPath: options.repo};
+			return {ok: false, error: t.git.currentGitUserMissing, repositoryPath: options.repo};
 		}
 
 		const authorStats = collectAuthorStats(commits, authorResolver, range.dayCount, options.author, currentGitUser);
@@ -76,7 +80,15 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 			}
 		};
 	} catch (error) {
-		if (error instanceof GitRepositoryError || error instanceof GitBranchError || error instanceof AuthorAliasConfigError) {
+		if (error instanceof GitRepositoryError) {
+			return {ok: false, error: t.git.notRepository(error.repoPath), repositoryPath: options.repo};
+		}
+
+		if (error instanceof GitBranchError) {
+			return {ok: false, error: t.git.branchNotFound(error.branchName), repositoryPath: options.repo};
+		}
+
+		if (error instanceof AuthorAliasConfigError || error instanceof GitInsightConfigError) {
 			return {ok: false, error: error.message, repositoryPath: options.repo};
 		}
 
@@ -97,5 +109,5 @@ async function resolveDateRange(
 		? await getFirstCommitDate(repositoryPath, branchRef)
 		: undefined;
 
-	return createCustomDateRange(options.rangeRequest, fallbackStartDate);
+	return createCustomDateRange(options.rangeRequest, fallbackStartDate, options.language);
 }

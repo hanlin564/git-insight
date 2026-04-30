@@ -1,5 +1,7 @@
 import path from 'node:path';
 import {Command, Help, type Argument, type Option} from 'commander';
+import {loadGitInsightLanguageSync} from '../config/gitInsightConfig.js';
+import {DEFAULT_LANGUAGE, getMessages, type SupportedLanguage} from '../i18n.js';
 import {addDays, formatDate, getDaysBetween, startOfLocalDay, type DateRange} from '../utils/date.js';
 
 const MAX_SINCE_DAYS = 3650;
@@ -21,21 +23,22 @@ export type CliOptions = {
 	branch?: string;
 	author?: string;
 	me: boolean;
+	language: SupportedLanguage;
 };
 
-const parsePositiveInteger = (value: string, optionName: string): number => {
+const parsePositiveInteger = (value: string, optionName: string, language: SupportedLanguage): number => {
 	const parsed = Number.parseInt(value, 10);
 	if (!/^\d+$/.test(value) || !Number.isFinite(parsed) || parsed <= 0) {
-		throw new Error(`${optionName} 必须是正整数。`);
+		throw new Error(getMessages(language).cli.errors.positiveInteger(optionName));
 	}
 
 	return parsed;
 };
 
-const parseSinceRange = (value: string): DateRange => {
-	const last = parsePositiveInteger(value, '--last');
+const parseSinceRange = (value: string, language: SupportedLanguage): DateRange => {
+	const last = parsePositiveInteger(value, '--last', language);
 	if (last > MAX_SINCE_DAYS) {
-		throw new Error(`--last 最大支持 ${MAX_SINCE_DAYS} 天。`);
+		throw new Error(getMessages(language).cli.errors.maxLastDays(MAX_SINCE_DAYS));
 	}
 
 	const end = startOfLocalDay(new Date());
@@ -45,15 +48,15 @@ const parseSinceRange = (value: string): DateRange => {
 		kind: 'since',
 		startDate: formatDate(start),
 		endDate: formatDate(end),
-		label: `最近 ${last} 天`,
+		label: getMessages(language).date.lastDays(last),
 		dayCount: last
 	};
 };
 
-const parseYearRange = (value: string): DateRange => {
-	const input = parseDateInput(value, '--year');
+const parseYearRange = (value: string, language: SupportedLanguage): DateRange => {
+	const input = parseDateInput(value, '--year', language);
 	if (input.precision !== 'year') {
-		throw new Error('--year 必须是 yyyy 格式。');
+		throw new Error(getMessages(language).cli.errors.yearFormat);
 	}
 
 	const {startDate, endDate} = input;
@@ -67,10 +70,10 @@ const parseYearRange = (value: string): DateRange => {
 	};
 };
 
-const parseMonthRange = (value: string): DateRange => {
-	const input = parseDateInput(value, '--month');
+const parseMonthRange = (value: string, language: SupportedLanguage): DateRange => {
+	const input = parseDateInput(value, '--month', language);
 	if (input.precision !== 'month') {
-		throw new Error('--month 必须是 yyyy-MM 格式。');
+		throw new Error(getMessages(language).cli.errors.monthFormat);
 	}
 
 	const {startDate, endDate} = input;
@@ -90,41 +93,47 @@ const parseRangeRequest = (values: {
 	month?: string;
 	from?: string;
 	to?: string;
-}): RangeRequest => {
+}, language: SupportedLanguage): RangeRequest => {
+	const t = getMessages(language);
 	const fixedValues = [values.last, values.year, values.month].filter(value => value !== undefined);
 	const hasCustomRange = values.from !== undefined || values.to !== undefined;
 
 	if (fixedValues.length > 1) {
-		throw new Error('--last、--year、--month 只能指定一个。');
+		throw new Error(t.cli.errors.fixedRangeConflict);
 	}
 
 	if (hasCustomRange && fixedValues.length > 0) {
-		throw new Error('--from/--to 不能和 --last、--year、--month 同时使用。');
+		throw new Error(t.cli.errors.customRangeConflict);
 	}
 
 	if (hasCustomRange) {
-		const from = values.from === undefined ? undefined : parseDateInput(String(values.from), '--from');
-		const to = values.to === undefined ? undefined : parseDateInput(String(values.to), '--to');
+		const from = values.from === undefined ? undefined : parseDateInput(String(values.from), '--from', language);
+		const to = values.to === undefined ? undefined : parseDateInput(String(values.to), '--to', language);
 
 		if (from && to && from.precision !== to.precision) {
-			throw new Error('--from 和 --to 同时使用时必须采用相同格式。');
+			throw new Error(t.cli.errors.customRangeSamePrecision);
 		}
 
 		return {kind: 'custom', from, to};
 	}
 
 	if (values.year !== undefined) {
-		return {kind: 'fixed', range: parseYearRange(String(values.year))};
+		return {kind: 'fixed', range: parseYearRange(String(values.year), language)};
 	}
 
 	if (values.month !== undefined) {
-		return {kind: 'fixed', range: parseMonthRange(String(values.month))};
+		return {kind: 'fixed', range: parseMonthRange(String(values.month), language)};
 	}
 
-	return {kind: 'fixed', range: parseSinceRange(String(values.last ?? '365'))};
+	return {kind: 'fixed', range: parseSinceRange(String(values.last ?? '365'), language)};
 };
 
-export function createCustomDateRange(request: Extract<RangeRequest, {kind: 'custom'}>, fallbackStartDate?: string): DateRange {
+export function createCustomDateRange(
+	request: Extract<RangeRequest, {kind: 'custom'}>,
+	fallbackStartDate?: string,
+	language: SupportedLanguage = DEFAULT_LANGUAGE
+): DateRange {
+	const t = getMessages(language);
 	const startDate = request.from?.startDate ?? fallbackStartDate;
 	const endDate = request.to?.endDate ?? formatDate(startOfLocalDay(new Date()));
 
@@ -133,30 +142,32 @@ export function createCustomDateRange(request: Extract<RangeRequest, {kind: 'cus
 			kind: 'custom',
 			startDate: endDate,
 			endDate,
-			label: getCustomRangeLabel(request),
+			label: getCustomRangeLabel(request, language),
 			dayCount: 0
 		};
 	}
 
 	const dayCount = getDaysBetween(startDate, endDate) + 1;
 	if (dayCount <= 0) {
-		throw new Error('--from 不能晚于 --to。');
+		throw new Error(t.cli.errors.fromAfterTo);
 	}
 
 	if (dayCount > MAX_SINCE_DAYS) {
-		throw new Error(`时间范围最大支持 ${MAX_SINCE_DAYS} 天。`);
+		throw new Error(t.cli.errors.maxRangeDays(MAX_SINCE_DAYS));
 	}
 
 	return {
 		kind: 'custom',
 		startDate,
 		endDate,
-		label: getCustomRangeLabel(request),
+		label: getCustomRangeLabel(request, language),
 		dayCount
 	};
 }
 
-function parseDateInput(value: string, optionName: string): DateInput {
+function parseDateInput(value: string, optionName: string, language: SupportedLanguage): DateInput {
+	const t = getMessages(language);
+
 	if (/^\d{4}$/.test(value)) {
 		return {
 			raw: value,
@@ -171,7 +182,7 @@ function parseDateInput(value: string, optionName: string): DateInput {
 		const year = Number.parseInt(monthMatch[1] ?? '', 10);
 		const month = Number.parseInt(monthMatch[2] ?? '', 10);
 		if (month < 1 || month > 12) {
-			throw new Error(`${optionName} 的月份必须在 01 到 12 之间。`);
+			throw new Error(t.cli.errors.monthOutOfRange(optionName));
 		}
 
 		return {
@@ -191,7 +202,7 @@ function parseDateInput(value: string, optionName: string): DateInput {
 		const formatted = formatDate(date);
 
 		if (formatted !== value) {
-			throw new Error(`${optionName} 必须是存在的日期。`);
+			throw new Error(t.cli.errors.invalidDate(optionName));
 		}
 
 		return {
@@ -202,114 +213,85 @@ function parseDateInput(value: string, optionName: string): DateInput {
 		};
 	}
 
-	throw new Error(`${optionName} 必须是 yyyy、yyyy-MM 或 yyyy-MM-dd 格式。`);
+	throw new Error(t.cli.errors.dateFormat(optionName));
 }
 
-function getCustomRangeLabel(request: Extract<RangeRequest, {kind: 'custom'}>): string {
-	return `${request.from?.raw ?? '首个提交'}..${request.to?.raw ?? '今天'}`;
+function getCustomRangeLabel(request: Extract<RangeRequest, {kind: 'custom'}>, language: SupportedLanguage): string {
+	const t = getMessages(language).date;
+	return `${request.from?.raw ?? t.firstCommit}..${request.to?.raw ?? t.today}`;
 }
 
 export function parseArgs(argv = process.argv): CliOptions {
+	const language = getConfiguredLanguageFromArgv(argv);
+	const t = getMessages(language);
 	const program = new Command();
 
 	program
 		.name('git-insight')
-		.description('一次性输出型 Git 仓库分析工具')
+		.description(t.cli.description)
 		.configureHelp({
-			optionDescription: describeOption,
-			argumentDescription: describeArgument,
-			formatHelp: formatChineseHelp
+			optionDescription: option => describeOption(option, language),
+			argumentDescription: argument => describeArgument(argument, language),
+			formatHelp: (command, helper) => formatHelp(command, helper, language)
 		})
 		.configureOutput({
 			outputError: (text, write) => {
-				write(translateCommanderError(text));
+				write(t.cli.commanderError(text));
 			}
 		})
-		.helpOption('-h, --help', '显示帮助信息')
-		.option('--last <days>', '统计最近 N 天数据，默认 365，最大 3650')
-		.option('--year <yyyy>', '统计指定年份数据')
-		.option('--month <yyyy-MM>', '统计指定月份数据')
-		.option('--from <date>', '统计起始时间，支持 yyyy、yyyy-MM、yyyy-MM-dd')
-		.option('--to <date>', '统计结束时间，支持 yyyy、yyyy-MM、yyyy-MM-dd')
-		.option('--branch <name>', '指定分析分支，默认当前分支')
-		.option('--repo <path>', '指定 Git 仓库目录，默认当前目录', process.cwd())
-		.option('--author <query>', '只展示匹配作者名称或邮箱的数据')
-		.option('--me', '聚焦当前 Git 配置用户的数据和排名')
-		.addHelpText('after', `
-时间范围:
-  默认使用 --last 365。
-  --last、--year、--month、--from/--to 只能选择一种时间范围。
-  --from 和 --to 可以单独使用；同时使用时必须采用相同格式。
-  只有 --from 时默认统计到今天，只有 --to 时默认从当前分析分支的第一个提交开始。
-  所有时间范围最大支持 ${MAX_SINCE_DAYS} 天。
-
-作者过滤:
-  --author 和 --me 只能选择一个。
-  --author 会匹配作者名称、邮箱和配置合并后的展示名称/邮箱。
-  --me 使用当前仓库 Git 配置中的 user.name / user.email；热力图展示本人，排行榜展示全仓库排名中的本人位置。
-
-显示内容:
-  默认显示提交热力图、作者排名和活跃/不活跃分支。
-  使用 --branch 指定单个分析分支时，不展示活跃/不活跃分支。
-
-示例:
-  git-insight --help
-  git-insight
-  git-insight --repo /path/to/repo
-  git-insight --repo /path/to/repo --last 90
-  git-insight --repo /path/to/repo --year 2025
-  git-insight --repo /path/to/repo --month 2025-04
-  git-insight --repo /path/to/repo --from 2024 --to 2025
-  git-insight --repo /path/to/repo --from 2025-04-01 --to 2025-04-20
-  git-insight --repo /path/to/repo --branch main --author alice
-  git-insight --repo /path/to/repo --me
-`);
+		.helpOption('-h, --help', t.cli.helpOption)
+		.option('--last <days>', t.cli.options.last)
+		.option('--year <yyyy>', t.cli.options.year)
+		.option('--month <yyyy-MM>', t.cli.options.month)
+		.option('--from <date>', t.cli.options.from)
+		.option('--to <date>', t.cli.options.to)
+		.option('--branch <name>', t.cli.options.branch)
+		.option('--repo <path>', t.cli.options.repo, process.cwd())
+		.option('--author <query>', t.cli.options.author)
+		.option('--me', t.cli.options.me)
+		.addHelpText('after', t.cli.helpText(MAX_SINCE_DAYS));
 
 	program.parse(argv);
 	const values = program.opts();
 	if (values.author && values.me) {
-		throw new Error('--author 和 --me 只能指定一个。');
+		throw new Error(t.cli.errors.authorMeConflict);
 	}
 
 	return {
 		repo: path.resolve(String(values.repo)),
-		rangeRequest: parseRangeRequest(values),
+		rangeRequest: parseRangeRequest(values, language),
 		branch: values.branch,
 		author: values.author,
-		me: values.me
+		me: values.me,
+		language
 	};
+}
+
+export function getConfiguredLanguageFromArgv(argv = process.argv): SupportedLanguage {
+	return loadGitInsightLanguageSync(getRepositoryPathFromArgv(argv));
 }
 
 const defaultHelp = new Help();
 
-function describeOption(option: Option): string {
-	return translateHelpExtra(defaultHelp.optionDescription(option));
+function describeOption(option: Option, language: SupportedLanguage): string {
+	return translateHelpExtra(defaultHelp.optionDescription(option), language);
 }
 
-function describeArgument(argument: Argument): string {
-	return translateHelpExtra(defaultHelp.argumentDescription(argument));
+function describeArgument(argument: Argument, language: SupportedLanguage): string {
+	return translateHelpExtra(defaultHelp.argumentDescription(argument), language);
 }
 
-function translateHelpExtra(value: string): string {
+function translateHelpExtra(value: string, language: SupportedLanguage): string {
+	const extras = getMessages(language).cli.helpExtras;
 	return value
-		.replace(/\bchoices: /g, '可选值：')
-		.replace(/\bdefault: /g, '默认：')
-		.replace(/\bpreset: /g, '预设：')
-		.replace(/\benv: /g, '环境变量：');
+		.replace(/\bchoices: /g, extras.choices)
+		.replace(/\bdefault: /g, extras.default)
+		.replace(/\bpreset: /g, extras.preset)
+		.replace(/\benv: /g, extras.env);
 }
 
-function translateCommanderError(value: string): string {
-	return value
-		.replace(/^error: unknown option '([^']+)'/m, '错误：未知选项 \'$1\'')
-		.replace(/^error: option '([^']+)' argument missing/m, '错误：选项 \'$1\' 缺少参数')
-		.replace(/^error: required option '([^']+)' not specified/m, '错误：必填选项 \'$1\' 未指定')
-		.replace(/^error: missing required argument '([^']+)'/m, '错误：缺少必填参数 \'$1\'')
-		.replace(/^error: too many arguments\. Expected (\d+) arguments? but got (\d+)\./m, '错误：参数过多。需要 $1 个，收到 $2 个。')
-		.replace(/\(Did you mean one of ([^)]+)\?\)/g, '（你是想输入这些选项之一吗：$1？）')
-		.replace(/\(Did you mean ([^)]+)\?\)/g, '（你是想输入 $1 吗？）');
-}
-
-function formatChineseHelp(command: Command, helper: Help): string {
+function formatHelp(command: Command, helper: Help, language: SupportedLanguage): string {
+	const headers = getMessages(language).cli.helpHeaders;
 	const termWidth = helper.padWidth(command, helper);
 	const helpWidth = helper.helpWidth ?? 80;
 	const itemIndentWidth = 2;
@@ -324,7 +306,7 @@ function formatChineseHelp(command: Command, helper: Help): string {
 	};
 	const formatList = (items: string[]): string => items.join('\n').replace(/^/gm, ' '.repeat(itemIndentWidth));
 
-	let output = [`用法：${helper.commandUsage(command)}`, ''];
+	let output = [`${headers.usage}${helper.commandUsage(command)}`, ''];
 
 	const commandDescription = helper.commandDescription(command);
 	if (commandDescription.length > 0) {
@@ -335,14 +317,14 @@ function formatChineseHelp(command: Command, helper: Help): string {
 		formatItem(helper.argumentTerm(argument), helper.argumentDescription(argument))
 	);
 	if (argumentList.length > 0) {
-		output = output.concat(['参数：', formatList(argumentList), '']);
+		output = output.concat([headers.arguments, formatList(argumentList), '']);
 	}
 
 	const optionList = helper.visibleOptions(command).map(option =>
 		formatItem(helper.optionTerm(option), helper.optionDescription(option))
 	);
 	if (optionList.length > 0) {
-		output = output.concat(['选项：', formatList(optionList), '']);
+		output = output.concat([headers.options, formatList(optionList), '']);
 	}
 
 	if (helper.showGlobalOptions) {
@@ -350,7 +332,7 @@ function formatChineseHelp(command: Command, helper: Help): string {
 			formatItem(helper.optionTerm(option), helper.optionDescription(option))
 		);
 		if (globalOptionList.length > 0) {
-			output = output.concat(['全局选项：', formatList(globalOptionList), '']);
+			output = output.concat([headers.globalOptions, formatList(globalOptionList), '']);
 		}
 	}
 
@@ -358,8 +340,26 @@ function formatChineseHelp(command: Command, helper: Help): string {
 		formatItem(helper.subcommandTerm(visibleCommand), helper.subcommandDescription(visibleCommand))
 	);
 	if (commandList.length > 0) {
-		output = output.concat(['命令：', formatList(commandList), '']);
+		output = output.concat([headers.commands, formatList(commandList), '']);
 	}
 
 	return output.join('\n');
+}
+
+function getRepositoryPathFromArgv(argv: string[]): string {
+	const args = argv.slice(2);
+
+	for (let index = 0; index < args.length; index += 1) {
+		const arg = args[index];
+
+		if (arg === '--repo') {
+			return path.resolve(args[index + 1] ?? process.cwd());
+		}
+
+		if (arg?.startsWith('--repo=')) {
+			return path.resolve(arg.slice('--repo='.length));
+		}
+	}
+
+	return process.cwd();
 }

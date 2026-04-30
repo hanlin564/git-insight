@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test, {type TestContext} from 'node:test';
 import {AuthorAliasConfigError, loadAuthorAliasLookup} from '../../src/analysis/authorAliases.js';
+import {GitInsightConfigError} from '../../src/config/gitInsightConfig.js';
 
 test('loadAuthorAliasLookup 读取仓库级作者合并配置', async t => {
 	const repoPath = await createTempDirectory(t);
@@ -31,27 +32,41 @@ test('loadAuthorAliasLookup 读取仓库级作者合并配置', async t => {
 	]);
 });
 
+test('loadAuthorAliasLookup 允许只配置语言', async t => {
+	const repoPath = await createTempDirectory(t);
+	await writeFile(path.join(repoPath, '.git-insight.json'), JSON.stringify({language: 'zh'}), 'utf8');
+
+	const lookup = await loadAuthorAliasLookup(repoPath, 'zh');
+
+	assert.deepEqual(lookup.groups, []);
+});
+
 test('loadAuthorAliasLookup 拒绝非法作者合并配置', async t => {
 	const cases = [
 		{
 			content: '{bad json',
-			message: /作者合并配置 JSON 格式错误/
+			message: /Git Insight config JSON format error/,
+			errorClass: GitInsightConfigError
 		},
 		{
-			content: JSON.stringify({}),
-			message: /作者合并配置必须包含 authors 数组/
+			content: JSON.stringify({authors: {}}),
+			message: /Git Insight config authors must be an array/,
+			errorClass: AuthorAliasConfigError
 		},
 		{
 			content: JSON.stringify({authors: [{}]}),
-			message: /必须包含 names 或 emails/
+			message: /must include names or emails/,
+			errorClass: AuthorAliasConfigError
 		},
 		{
 			content: JSON.stringify({authors: [{names: ['Alice']}, {names: ['Alice']}]}),
-			message: /作者名称重复出现在多个作者合并组/
+			message: /Author name appears in multiple alias groups/,
+			errorClass: AuthorAliasConfigError
 		},
 		{
 			content: JSON.stringify({authors: [{emails: ['alice@example.com']}, {emails: ['alice@example.com']}]}),
-			message: /邮箱重复出现在多个作者合并组/
+			message: /Email appears in multiple alias groups/,
+			errorClass: AuthorAliasConfigError
 		}
 	];
 
@@ -59,7 +74,7 @@ test('loadAuthorAliasLookup 拒绝非法作者合并配置', async t => {
 		const repoPath = await createTempDirectory(t);
 		await writeFile(path.join(repoPath, '.git-insight.json'), item.content, 'utf8');
 		await assert.rejects(() => loadAuthorAliasLookup(repoPath), (error: unknown) => {
-			assert.equal(error instanceof AuthorAliasConfigError, true);
+			assert.equal(error instanceof item.errorClass, true);
 			assert.match(error instanceof Error ? error.message : String(error), item.message);
 			return true;
 		});

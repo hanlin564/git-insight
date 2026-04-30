@@ -2,12 +2,14 @@ import React from 'react';
 import {Box, Text} from 'ink';
 import type {RepositoryStats} from '../../analysis/collectRepositoryStats.js';
 import type {AuthorStat} from '../../git/types.js';
+import {getMessages, type SupportedLanguage} from '../../i18n.js';
 import {Section} from './Section.js';
 import {BarChart, type BarChartItem} from './BarChart.js';
 
 type AuthorRankingProps = {
 	stats: RepositoryStats;
 	showCurrentUserContext?: boolean;
+	language: SupportedLanguage;
 };
 
 type RankingAuthor = {
@@ -22,52 +24,57 @@ type RankingView = {
 	total: number;
 };
 
-export function AuthorRanking({stats, showCurrentUserContext = false}: AuthorRankingProps) {
+export function AuthorRanking({stats, showCurrentUserContext = false, language}: AuthorRankingProps) {
+	const t = getMessages(language).ui;
 	const changedLinesPerDayRanking = createRankingView(
 		stats.authorStats,
 		author => author.changedLinesPerDay,
 		showCurrentUserContext,
-		(a, b) => b.changedLines - a.changedLines || b.commitCount - a.commitCount
+		(a, b) => b.changedLines - a.changedLines || b.commitCount - a.commitCount,
+		language
 	);
-	const commitRanking = createRankingView(stats.authorStats, author => author.commitCount, showCurrentUserContext);
-	const changedLinesRanking = createRankingView(stats.authorStats, author => author.changedLines, showCurrentUserContext);
+	const commitRanking = createRankingView(stats.authorStats, author => author.commitCount, showCurrentUserContext, undefined, language);
+	const changedLinesRanking = createRankingView(stats.authorStats, author => author.changedLines, showCurrentUserContext, undefined, language);
 
 	return (
 		<Box flexDirection="column">
-			<Section title="每日代码改动增速排行榜 (行/天)">
-				{showCurrentUserContext && <CurrentRankText ranking={changedLinesPerDayRanking} />}
+			<Section title={t.changedLinesPerDayRankingTitle}>
+				{showCurrentUserContext && <CurrentRankText ranking={changedLinesPerDayRanking} language={language} />}
 				<BarChart items={changedLinesPerDayRanking.items} barChar="━" />
 			</Section>
 
-			<Section title="提交数排行榜 (次)">
-				{showCurrentUserContext && <CurrentRankText ranking={commitRanking} />}
+			<Section title={t.commitRankingTitle}>
+				{showCurrentUserContext && <CurrentRankText ranking={commitRanking} language={language} />}
 				<BarChart items={commitRanking.items} barChar="━" />
 			</Section>
 
-			<Section title="代码改动排行榜 (行)">
-				{showCurrentUserContext && <CurrentRankText ranking={changedLinesRanking} />}
+			<Section title={t.changedLinesRankingTitle}>
+				{showCurrentUserContext && <CurrentRankText ranking={changedLinesRanking} language={language} />}
 				<BarChart items={changedLinesRanking.items} barChar="━" />
 			</Section>
 		</Box>
 	);
 }
 
-function CurrentRankText({ranking}: {ranking: RankingView}) {
+function CurrentRankText({ranking, language}: {ranking: RankingView; language: SupportedLanguage}) {
+	const t = getMessages(language).ui;
+
 	if (!ranking.currentRank) {
-		return <Text color="yellow">你的排名 -/{ranking.total}（当前 Git 用户在统计范围内无提交）</Text>;
+		return <Text color="yellow">{t.missingCurrentRank(ranking.total)}</Text>;
 	}
 
-	return <Text color="cyan">你的排名 {ranking.currentRank}/{ranking.total}</Text>;
+	return <Text color="cyan">{t.currentRank(ranking.currentRank, ranking.total)}</Text>;
 }
 
 function createRankingView(
 	authors: AuthorStat[],
 	getValue: (author: AuthorStat) => number,
 	showCurrentUserContext: boolean,
-	compareTies: (a: AuthorStat, b: AuthorStat) => number = () => 0
+	compareTies: ((a: AuthorStat, b: AuthorStat) => number) | undefined,
+	language: SupportedLanguage
 ): RankingView {
 	const rankedAuthors = [...authors]
-		.sort((a, b) => getValue(b) - getValue(a) || compareTies(a, b))
+		.sort((a, b) => getValue(b) - getValue(a) || (compareTies?.(a, b) ?? 0))
 		.map((author, index) => ({
 			author,
 			rank: index + 1,
@@ -80,7 +87,7 @@ function createRankingView(
 	const selectedAuthors = selectedIndices.map(index => rankedAuthors[index]).filter((item): item is RankingAuthor => item !== undefined);
 
 	return {
-		items: toAuthorItems(selectedAuthors, rankedAuthors),
+		items: toAuthorItems(selectedAuthors, rankedAuthors, language),
 		currentRank: currentUserIndex >= 0 ? rankedAuthors[currentUserIndex]?.rank : undefined,
 		total: rankedAuthors.length
 	};
@@ -112,7 +119,7 @@ function createRange(start: number, end: number): number[] {
 	return Array.from({length: end - start + 1}, (_, index) => start + index);
 }
 
-function toAuthorItems(authors: RankingAuthor[], allAuthors: RankingAuthor[]): BarChartItem[] {
+function toAuthorItems(authors: RankingAuthor[], allAuthors: RankingAuthor[], language: SupportedLanguage): BarChartItem[] {
 	const nameCounts = allAuthors.reduce((counts, author) => {
 		counts.set(author.author.authorName, (counts.get(author.author.authorName) ?? 0) + 1);
 		return counts;
@@ -135,7 +142,7 @@ function toAuthorItems(authors: RankingAuthor[], allAuthors: RankingAuthor[]): B
 		items.push({
 			key: author.authorEmail ? `${author.authorName}-${author.authorEmail}-${rank}` : `${author.authorName}-${rank}`,
 			rank,
-			label: getAuthorLabel(author, (nameCounts.get(author.authorName) ?? 0) > 1, author.isCurrentUser === true),
+			label: getAuthorLabel(author, (nameCounts.get(author.authorName) ?? 0) > 1, author.isCurrentUser === true, language),
 			value,
 			isHighlighted: author.isCurrentUser === true
 		});
@@ -144,8 +151,8 @@ function toAuthorItems(authors: RankingAuthor[], allAuthors: RankingAuthor[]): B
 	return items;
 }
 
-function getAuthorLabel(author: AuthorStat, needsEmail: boolean, isCurrentUser: boolean): string {
-	const prefix = isCurrentUser ? '你 ' : '';
+function getAuthorLabel(author: AuthorStat, needsEmail: boolean, isCurrentUser: boolean, language: SupportedLanguage): string {
+	const prefix = isCurrentUser ? `${getMessages(language).ui.currentUserPrefix} ` : '';
 
 	if (!needsEmail || !author.authorEmail) {
 		return `${prefix}${author.authorName}`;

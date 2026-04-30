@@ -27,6 +27,7 @@ export type TempGitRepository = {
 	removeFile: (options: Omit<CommitOptions, 'content'>) => Promise<void>;
 	checkout: (branchName: string) => Promise<void>;
 	createBranch: (branchName: string) => Promise<void>;
+	writeConfig: (content: string) => Promise<void>;
 	writeAuthorAliases: (content: string) => Promise<void>;
 };
 
@@ -105,6 +106,9 @@ export async function createTempGitRepository(
 			await git(['checkout', '-b', branchName]);
 			branchTips.set(branchName, branchTips.get(currentBranchName));
 			currentBranchName = branchName;
+		},
+		async writeConfig(content: string) {
+			await writeFile(path.join(repoPath, '.git-insight.json'), content, 'utf8');
 		},
 		async writeAuthorAliases(content: string) {
 			await writeFile(path.join(repoPath, '.git-insight.json'), content, 'utf8');

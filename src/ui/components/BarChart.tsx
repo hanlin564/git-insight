@@ -26,7 +26,7 @@ export function BarChart({
 	items,
 	width = 24,
 	color = 'green',
-	emptyText = '暂无数据',
+	emptyText = 'No data',
 	itemGap = 0,
 	barGap = 1,
 	barChar = '█'

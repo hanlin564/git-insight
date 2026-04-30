@@ -1,6 +1,5 @@
-import {readFile} from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
+import {loadGitInsightConfig} from '../config/gitInsightConfig.js';
+import {DEFAULT_LANGUAGE, getMessages, type SupportedLanguage} from '../i18n.js';
 
 export type AuthorAliasGroup = {
 	key: string;
@@ -21,20 +20,12 @@ export class AuthorAliasConfigError extends Error {
 	}
 }
 
-type RawAuthorAliasConfig = {
-	authors: unknown;
-};
-
 export async function loadAuthorAliasLookup(
-	repositoryPath: string
+	repositoryPath: string,
+	language: SupportedLanguage = DEFAULT_LANGUAGE
 ): Promise<AuthorAliasLookup> {
-	const config = await readAuthorAliasConfig(repositoryPath);
-
-	if (!config) {
-		return createAuthorAliasLookup([]);
-	}
-
-	return createAuthorAliasLookup(parseAuthorAliasConfig(config.content, config.filePath));
+	const config = await loadGitInsightConfig(repositoryPath, language);
+	return createAuthorAliasLookup(parseAuthorAliasConfig(config.authors, language));
 }
 
 function createAuthorAliasLookup(groups: AuthorAliasGroup[]): AuthorAliasLookup {
@@ -43,57 +34,28 @@ function createAuthorAliasLookup(groups: AuthorAliasGroup[]): AuthorAliasLookup 
 	};
 }
 
-async function readConfigFile(filePath: string): Promise<string | undefined> {
-	try {
-		return await readFile(filePath, 'utf8');
-	} catch (error) {
-		if (isFileNotFoundError(error)) {
-			return undefined;
-		}
+function parseAuthorAliasConfig(authors: unknown, language: SupportedLanguage): AuthorAliasGroup[] {
+	const t = getMessages(language);
 
-		throw error;
-	}
-}
-
-async function readAuthorAliasConfig(repositoryPath: string): Promise<{content: string; filePath: string} | undefined> {
-	const configPaths = [
-		path.join(repositoryPath, '.git-insight.json'),
-		path.join(os.homedir(), '.git-insight.json')
-	];
-
-	for (const filePath of configPaths) {
-		const content = await readConfigFile(filePath);
-
-		if (content !== undefined) {
-			return {content, filePath};
-		}
+	if (authors === undefined) {
+		return [];
 	}
 
-	return undefined;
-}
-
-function parseAuthorAliasConfig(content: string, filePath: string): AuthorAliasGroup[] {
-	let value: unknown;
-
-	try {
-		value = JSON.parse(content);
-	} catch {
-		throw new AuthorAliasConfigError(`作者合并配置 JSON 格式错误：${filePath}`);
+	if (!Array.isArray(authors)) {
+		throw new AuthorAliasConfigError(t.config.authorsMustBeArray);
 	}
 
-	if (!isRecord(value) || !Array.isArray((value as RawAuthorAliasConfig).authors)) {
-		throw new AuthorAliasConfigError('作者合并配置必须包含 authors 数组。');
-	}
-
-	const rawAliases = (value as {authors: unknown[]}).authors;
-	const groups = rawAliases.map((group, index) => parseAliasGroup(group, index));
-	assertUniqueMatchers(groups);
+	const groups = authors.map((group, index) => parseAliasGroup(group, index, language));
+	assertUniqueMatchers(groups, language);
 	return groups;
 }
 
-function parseAliasGroup(value: unknown, index: number): AuthorAliasGroup {
+function parseAliasGroup(value: unknown, index: number, language: SupportedLanguage): AuthorAliasGroup {
+	const t = getMessages(language);
+	const displayIndex = index + 1;
+
 	if (!isRecord(value)) {
-		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置必须是对象。`);
+		throw new AuthorAliasConfigError(t.config.authorGroupMustBeObject(displayIndex));
 	}
 
 	const displayName = value.displayName;
@@ -102,26 +64,26 @@ function parseAliasGroup(value: unknown, index: number): AuthorAliasGroup {
 	const emails = value.emails;
 
 	if (displayName !== undefined && !isNonEmptyString(displayName)) {
-		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 displayName 必须是非空字符串。`);
+		throw new AuthorAliasConfigError(t.config.displayNameMustBeString(displayIndex));
 	}
 
 	if (displayEmail !== undefined && !isNonEmptyString(displayEmail)) {
-		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 displayEmail 必须是非空字符串。`);
+		throw new AuthorAliasConfigError(t.config.displayEmailMustBeString(displayIndex));
 	}
 
 	if (names !== undefined && (!Array.isArray(names) || !names.every(isNonEmptyString))) {
-		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 names 必须是字符串数组。`);
+		throw new AuthorAliasConfigError(t.config.namesMustBeStringArray(displayIndex));
 	}
 
 	if (emails !== undefined && (!Array.isArray(emails) || !emails.every(isNonEmptyString))) {
-		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置的 emails 必须是字符串数组。`);
+		throw new AuthorAliasConfigError(t.config.emailsMustBeStringArray(displayIndex));
 	}
 
 	const normalizedNames = uniqueValues(Array.isArray(names) ? names.map(normalizeName) : []);
 	const normalizedEmails = uniqueValues(Array.isArray(emails) ? emails.map(normalizeEmail) : []);
 
 	if (normalizedNames.length === 0 && normalizedEmails.length === 0) {
-		throw new AuthorAliasConfigError(`第 ${index + 1} 个作者合并配置必须包含 names 或 emails。`);
+		throw new AuthorAliasConfigError(t.config.groupMustHaveMatcher(displayIndex));
 	}
 
 	return {
@@ -133,7 +95,8 @@ function parseAliasGroup(value: unknown, index: number): AuthorAliasGroup {
 	};
 }
 
-function assertUniqueMatchers(groups: AuthorAliasGroup[]): void {
+function assertUniqueMatchers(groups: AuthorAliasGroup[], language: SupportedLanguage): void {
+	const t = getMessages(language);
 	const ownerByName = new Map<string, string>();
 	const ownerByEmail = new Map<string, string>();
 
@@ -143,7 +106,7 @@ function assertUniqueMatchers(groups: AuthorAliasGroup[]): void {
 			const owner = ownerByName.get(key);
 
 			if (owner) {
-				throw new AuthorAliasConfigError(`作者名称重复出现在多个作者合并组：${name}`);
+				throw new AuthorAliasConfigError(t.config.duplicateName(name));
 			}
 
 			ownerByName.set(key, group.key);
@@ -154,7 +117,7 @@ function assertUniqueMatchers(groups: AuthorAliasGroup[]): void {
 			const owner = ownerByEmail.get(key);
 
 			if (owner) {
-				throw new AuthorAliasConfigError(`邮箱重复出现在多个作者合并组：${email}`);
+				throw new AuthorAliasConfigError(t.config.duplicateEmail(email));
 			}
 
 			ownerByEmail.set(key, group.key);
@@ -190,8 +153,4 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
 	return typeof value === 'string' && value.trim().length > 0;
-}
-
-function isFileNotFoundError(error: unknown): boolean {
-	return isRecord(error) && error.code === 'ENOENT';
 }

@@ -2,10 +2,12 @@ import React from 'react';
 import {Box, Text} from 'ink';
 import type {HeatmapPeriodCount} from '../../git/types.js';
 import type {ContributionHeatmapStat} from '../../analysis/heatmapStats.js';
-import {getMondayFirstWeekday, getMonthLabel} from '../../utils/date.js';
+import {DEFAULT_LANGUAGE, getMessages, type SupportedLanguage} from '../../i18n.js';
+import {getMondayFirstWeekday} from '../../utils/date.js';
 
 type ContributionHeatmapProps = {
 	heatmap: ContributionHeatmapStat;
+	language: SupportedLanguage;
 };
 
 export type WeekColumn = Array<HeatmapPeriodCount | undefined>;
@@ -21,29 +23,28 @@ type YearRow = {
 	months: Array<HeatmapPeriodCount | undefined>;
 };
 
-const WEEKDAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const COLORS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
 const DAILY_WEEK_COLUMN_WIDTH = 2;
 
-export function ContributionHeatmap({heatmap}: ContributionHeatmapProps) {
+export function ContributionHeatmap({heatmap, language}: ContributionHeatmapProps) {
 	if (heatmap.granularity === 'monthly') {
-		return <MonthlyHeatmap heatmap={heatmap} />;
+		return <MonthlyHeatmap heatmap={heatmap} language={language} />;
 	}
 
-	return <DailyHeatmap heatmap={heatmap} />;
+	return <DailyHeatmap heatmap={heatmap} language={language} />;
 }
 
-function DailyHeatmap({heatmap}: ContributionHeatmapProps) {
+function DailyHeatmap({heatmap, language}: ContributionHeatmapProps) {
+	const t = getMessages(language).ui;
 	const weeks = buildWeeks(heatmap.periods);
-	const layout = buildDailyHeatmapLayout(weeks);
+	const layout = buildDailyHeatmapLayout(weeks, language);
 	const monthLabels = buildMonthLabels(layout);
 
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
-			<Legend />
+			<Legend language={language} />
 			<Text color="gray">      {monthLabels}</Text>
-			{WEEKDAY_LABELS.map((label, rowIndex) => (
+			{t.weekdays.map((label, rowIndex) => (
 				<Text key={label}>
 					<Text color="gray">{label}  </Text>
 					{layout.map((column, weekIndex) => (
@@ -58,14 +59,15 @@ function DailyHeatmap({heatmap}: ContributionHeatmapProps) {
 	);
 }
 
-function MonthlyHeatmap({heatmap}: ContributionHeatmapProps) {
+function MonthlyHeatmap({heatmap, language}: ContributionHeatmapProps) {
+	const t = getMessages(language).ui;
 	const rows = buildYearRows(heatmap.periods);
 
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
-			<Legend />
-			<Text color="gray">按月视图</Text>
-			<Text color="gray">      {MONTH_LABELS.map(label => label.padEnd(4, ' ')).join('')}</Text>
+			<Legend language={language} />
+			<Text color="gray">{t.monthlyView}</Text>
+			<Text color="gray">      {t.months.map(label => label.padEnd(4, ' ')).join('')}</Text>
 			{rows.map(row => (
 				<Text key={row.year}>
 					<Text color="gray">{row.year}  </Text>
@@ -80,12 +82,14 @@ function MonthlyHeatmap({heatmap}: ContributionHeatmapProps) {
 	);
 }
 
-function Legend() {
+function Legend({language}: {language: SupportedLanguage}) {
+	const t = getMessages(language).ui;
+
 	return (
 		<Text>
-			<Text color="gray">少 </Text>
+			<Text color="gray">{t.less} </Text>
 			{COLORS.map(color => <Text key={color} color={color}>■ </Text>)}
-			<Text color="gray">多</Text>
+			<Text color="gray">{t.more}</Text>
 		</Text>
 	);
 }
@@ -117,7 +121,10 @@ export function buildWeeks(periods: HeatmapPeriodCount[]): WeekColumn[] {
 	return weeks;
 }
 
-export function buildDailyHeatmapLayout(weeks: WeekColumn[]): DailyHeatmapColumn[] {
+export function buildDailyHeatmapLayout(
+	weeks: WeekColumn[],
+	language: SupportedLanguage = DEFAULT_LANGUAGE
+): DailyHeatmapColumn[] {
 	let previousMonth = '';
 
 	return weeks.map(week => {
@@ -132,7 +139,7 @@ export function buildDailyHeatmapLayout(weeks: WeekColumn[]): DailyHeatmapColumn
 		}
 
 		previousMonth = getMonthKey(firstNewMonthPeriod.period);
-		column.monthLabel = getMonthLabel(firstNewMonthPeriod.period);
+		column.monthLabel = getLocalizedMonthLabel(firstNewMonthPeriod.period, language);
 		return column;
 	});
 }
@@ -188,6 +195,11 @@ function hasMultipleMonths(periods: HeatmapPeriodCount[]): boolean {
 
 function getMonthKey(dateText: string): string {
 	return dateText.slice(0, 7);
+}
+
+function getLocalizedMonthLabel(dateText: string, language: SupportedLanguage): string {
+	const monthIndex = Number.parseInt(dateText.slice(5, 7), 10) - 1;
+	return getMessages(language).ui.months[monthIndex] ?? dateText.slice(5, 7);
 }
 
 function buildYearRows(periods: HeatmapPeriodCount[]): YearRow[] {

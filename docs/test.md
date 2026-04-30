@@ -33,24 +33,28 @@ npm run build
 
 | 测试案例 | 命令形态 | 场景 | 预期 |
 | --- | --- | --- | --- |
-| 按指定月份统计临时仓库提交，并输出排行榜 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库包含 2025-03 的 Carol 提交，以及 2025-04 的 Alice、Bob 提交。 | 退出码为 `0`；输出仓库名、`当前分支: main`、`分析分支: main`、`统计范围：2025-04`、提交数排行榜、Alice、Bob；不输出 Carol。 |
-| 支持 `--last` 统计最近 N 天提交 | `git-insight --repo <临时仓库> --last 7` | 仓库包含最近 7 天内的 Recent Author 提交，以及 10 天前的 Old Author 提交。 | 退出码为 `0`；输出 `统计范围：最近 7 天` 和 Recent Author；不输出 Old Author。 |
-| 支持 `--year` 只统计指定年份提交 | `git-insight --repo <临时仓库> --year 2025` | 仓库包含 2024-12-31 和 2025-01-01 两个提交。 | 退出码为 `0`；输出 `统计范围：2025` 和 Target Year；不输出 Last Year。 |
-| 支持单独使用 `--from` 统计到今天 | `git-insight --repo <临时仓库> --from <日期>` | 仓库包含指定起始日期前后的提交。 | 退出码为 `0`；输出 `<日期>..今天`；只输出范围内作者。 |
-| 支持单独使用 `--to` 从首个提交统计到指定日期 | `git-insight --repo <临时仓库> --to 2025-01-31` | 仓库首个提交在 2025-01-10，另有 2025-02-10 提交。 | 退出码为 `0`；输出 `首个提交..2025-01-31` 和 First Author；不输出 After Author。 |
-| 支持 `--branch` 分析指定分支 | `git-insight --repo <临时仓库> --branch feature/report --from 2025-04-01 --to 2025-04-30` | 当前检出 `main`，指定分析 `feature/report`，该分支有 Branch User 提交。 | 退出码为 `0`；输出 `当前分支: main`、`分析分支: feature/report` 和 Branch User；不输出活跃/不活跃分支。 |
-| 未指定 `--branch` 时展示活跃和不活跃分支 | `git-insight --repo <临时仓库> --last 3650` | 仓库包含默认分支、最近 90 天内提交的 `feature/active`，以及超过 90 天未提交的 `feature/stale`。 | 退出码为 `0`；输出 `活跃分支`、`feature/active`、`不活跃分支` 和当前 `feature/stale`。 |
-| 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `当前分支: HEAD`、`分析分支: HEAD` 和 Detached User。 |
-| 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `作者过滤：bob@example.com` 和 Bob；不输出 Alice。 |
-| 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`你的排名`，并以 `你 Bob` 展示当前用户。 |
-| 使用 `--me` 但仓库没有 Git 用户配置时返回可读错误 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 临时仓库不配置本地 `user.name` 和 `user.email`，运行环境也隔离了 HOME。 | 退出码为 `1`；输出 `未读取到当前 Git 配置用户`。 |
-| 空仓库会输出无提交数据提示 | `git-insight --repo <空临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库已 `git init`，但没有任何提交。 | 退出码为 `0`；输出 `当前统计范围内没有匹配的提交数据`；不输出排行榜。 |
-| 非 Git 目录会返回可读错误 | `git-insight --repo <临时非 Git 目录>` | 创建普通临时目录，不执行 `git init`。 | 退出码为 `1`；输出 `目录不是 Git 仓库`。 |
-| 不存在的分支会返回可读错误 | `git-insight --repo <临时仓库> --branch missing-branch` | 仓库存在提交，但指定分支不存在。 | 退出码为 `1`；输出 `找不到指定分支：missing-branch`。 |
-| 参数组合非法时返回可读错误 | `git-insight --last 7 --month 2025-04` | 同时指定互斥的固定时间范围。 | 退出码为 `1`；输出 `--last、--year、--month 只能指定一个`。 |
-| 未知参数会返回中文错误 | `git-insight --since` | 使用不支持的参数。 | 退出码为 `1`；输出 `错误：未知选项 '--since'`，不输出 `unknown option`。 |
-| 已移除的显示开关会返回未知参数错误 | `git-insight --no-heatmap` | 使用已移除的显示开关。 | 退出码为 `1`；输出 `错误：未知选项 '--no-heatmap'`，不输出 `unknown option`。 |
-| 帮助命令输出关键参数说明 | `git-insight --help` | 请求 CLI 帮助。 | 退出码为 `0`；输出 `用法：`、`选项：`、`--repo <path>`、`--from <date>`、`--me`。 |
+| 按指定月份统计临时仓库提交，并输出排行榜 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库包含 2025-03 的 Carol 提交，以及 2025-04 的 Alice、Bob 提交。 | 默认英文；退出码为 `0`；输出仓库名、`Current branch: main`、`Analysis branch: main`、`Date range: 2025-04`、Commit Count Ranking、Alice、Bob；不输出 Carol。 |
+| 支持 `--last` 统计最近 N 天提交 | `git-insight --repo <临时仓库> --last 7` | 仓库包含最近 7 天内的 Recent Author 提交，以及 10 天前的 Old Author 提交。 | 退出码为 `0`；输出 `Date range: Last 7 days` 和 Recent Author；不输出 Old Author。 |
+| 支持 `--year` 只统计指定年份提交 | `git-insight --repo <临时仓库> --year 2025` | 仓库包含 2024-12-31 和 2025-01-01 两个提交。 | 退出码为 `0`；输出 `Date range: 2025` 和 Target Year；不输出 Last Year。 |
+| 支持单独使用 `--from` 统计到 today | `git-insight --repo <临时仓库> --from <日期>` | 仓库包含指定起始日期前后的提交。 | 退出码为 `0`；输出 `<日期>..today`；只输出范围内作者。 |
+| 支持单独使用 `--to` 从 first commit 统计到指定日期 | `git-insight --repo <临时仓库> --to 2025-01-31` | 仓库首个提交在 2025-01-10，另有 2025-02-10 提交。 | 退出码为 `0`；输出 `first commit..2025-01-31` 和 First Author；不输出 After Author。 |
+| 支持 `--branch` 分析指定分支 | `git-insight --repo <临时仓库> --branch feature/report --from 2025-04-01 --to 2025-04-30` | 当前检出 `main`，指定分析 `feature/report`，该分支有 Branch User 提交。 | 退出码为 `0`；输出 `Current branch: main`、`Analysis branch: feature/report` 和 Branch User；不输出 Active/Stale Branches。 |
+| 未指定 `--branch` 时展示活跃和不活跃分支 | `git-insight --repo <临时仓库> --last 3650` | 仓库包含默认分支、最近 90 天内提交的 `feature/active`，以及超过 90 天未提交的 `feature/stale`。 | 退出码为 `0`；输出 `Active Branches`、`feature/active`、`Stale Branches` 和 `current feature/stale`。 |
+| 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `Current branch: HEAD`、`Analysis branch: HEAD` 和 Detached User。 |
+| 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `Author filter: bob@example.com` 和 Bob；不输出 Alice。 |
+| 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`Your rank`，并以 `you Bob` 展示当前用户。 |
+| 使用 `--me` 但仓库没有 Git 用户配置时返回可读错误 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 临时仓库不配置本地 `user.name` 和 `user.email`，运行环境也隔离了 HOME。 | 退出码为 `1`；输出 `Could not read the current Git configured user`。 |
+| 空仓库会输出无提交数据提示 | `git-insight --repo <空临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库已 `git init`，但没有任何提交。 | 退出码为 `0`；输出 `No matching commit data in the current date range`；不输出 Ranking。 |
+| 非 Git 目录会返回可读错误 | `git-insight --repo <临时非 Git 目录>` | 创建普通临时目录，不执行 `git init`。 | 退出码为 `1`；输出 `Not a Git repository`。 |
+| 不存在的分支会返回可读错误 | `git-insight --repo <临时仓库> --branch missing-branch` | 仓库存在提交，但指定分支不存在。 | 退出码为 `1`；输出 `Branch not found: missing-branch`。 |
+| 参数组合非法时返回可读错误 | `git-insight --last 7 --month 2025-04` | 同时指定互斥的固定时间范围。 | 退出码为 `1`；输出 `Specify only one of --last, --year, and --month`。 |
+| 未知参数默认返回英文错误 | `git-insight --since` | 使用不支持的参数。 | 退出码为 `1`；输出 `error: unknown option '--since'`，不输出中文未知参数错误。 |
+| 已移除的显示开关会返回未知参数错误 | `git-insight --no-heatmap` | 使用已移除的显示开关。 | 退出码为 `1`；输出 `error: unknown option '--no-heatmap'`，不输出中文未知参数错误。 |
+| 帮助命令输出关键参数说明 | `git-insight --help` | 请求 CLI 帮助。 | 退出码为 `0`；输出 `Usage:`、`Options:`、`--repo <path>`、`--from <date>`、`--me`。 |
+| 仓库配置 `language: "zh"` 时输出中文界面 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 退出码为 `0`；输出仓库名、`当前分支: main`、`分析分支: main`、`统计范围：2025-04`、提交数排行榜；不输出 `Repository:`。 |
+| 仓库配置 `language: "en"` 时输出英文界面 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库内 `.git-insight.json` 设置 `{ "language": "en" }`。 | 退出码为 `0`；输出 `Repository:`、`Current branch:`、`Date range:`；不输出 `仓库：`。 |
+| 中文配置下帮助和未知参数输出中文 | `git-insight --repo <临时仓库> --help`、`git-insight --repo <临时仓库> --since` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 帮助输出 `用法：`、`选项：`；未知参数输出 `错误：未知选项 '--since'`。 |
+| 非法 `language` 配置会返回可读错误 | `git-insight --repo <临时仓库> --help` | 仓库内 `.git-insight.json` 设置 `{ "language": "ja" }`。 | 退出码为 `1`；输出 `Git Insight config language must be "en" or "zh"`。 |
 | 临时仓库内的作者合并配置会参与命令统计 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author team@example.com` | 仓库内 `.git-insight.json` 将 Alice 合并展示为 `Alice Team <team@example.com>`。 | 退出码为 `0`；输出 Alice Team；不输出 Bob。 |
 
 ## 参数解析单测
@@ -59,11 +63,11 @@ npm run build
 
 | 测试案例 | 被测对象 | 场景 | 预期 |
 | --- | --- | --- | --- |
-| `parseArgs` 使用默认范围 | `parseArgs([])` | 不传任何参数。 | 默认使用 `最近 365 天`。 |
+| `parseArgs` 使用默认范围 | `parseArgs([])` | 不传任何参数。 | 默认语言为 `en`，默认范围为 `Last 365 days`。 |
 | `parseArgs` 解析合法时间范围 | `parseArgs` | 分别传入 `--last 7`、`--year 2025`、`--month 2025-04`、`--from 2025-04-01 --to 2025-04-30`。 | 正确生成固定或自定义时间范围，开始/结束日期符合预期。 |
 | `parseArgs` 解析仓库、作者和分支参数 | `parseArgs` | 传入 `--repo`、`--branch`、`--author`。 | 仓库路径被解析为绝对路径；分支和作者值正确。 |
-| `parseArgs` 拒绝非法日期和互斥参数 | `parseArgs` | 传入非法 `--last`、非法月份、不存在日期、互斥时间参数、`--author` 与 `--me` 同用。 | 抛出对应中文错误。 |
-| `createCustomDateRange` 处理自定义范围边界 | `createCustomDateRange` | 构造合法日期范围和 `from > to` 的非法范围。 | 合法范围 dayCount 正确；非法范围抛出 `--from 不能晚于 --to`。 |
+| `parseArgs` 拒绝非法日期和互斥参数 | `parseArgs` | 传入非法 `--last`、非法月份、不存在日期、互斥时间参数、`--author` 与 `--me` 同用。 | 默认抛出对应英文错误。 |
+| `createCustomDateRange` 处理自定义范围边界 | `createCustomDateRange` | 构造合法日期范围和 `from > to` 的非法范围。 | 合法范围 dayCount 正确；非法范围抛出 `--from cannot be later than --to`。 |
 
 ## Git 解析与真实 Git 命令测试
 
@@ -83,7 +87,8 @@ npm run build
 | 测试案例 | 被测对象 | 场景 | 预期 |
 | --- | --- | --- | --- |
 | 读取仓库级作者合并配置 | `loadAuthorAliasLookup` | 仓库内 `.git-insight.json` 包含展示名、展示邮箱、names、emails，且含重复和空白字符。 | 返回规范化后的作者合并组，去掉空白和重复 matcher。 |
-| 拒绝非法作者合并配置 | `loadAuthorAliasLookup` | 配置为非法 JSON、缺少 `authors`、空 matcher、重复 name、重复 email。 | 抛出 `AuthorAliasConfigError` 和对应中文错误。 |
+| 允许只配置语言 | `loadAuthorAliasLookup` | 仓库内 `.git-insight.json` 只包含 `{ "language": "zh" }`。 | 返回空作者合并组。 |
+| 拒绝非法作者合并配置 | `loadAuthorAliasLookup` | 配置为非法 JSON、非法 `authors`、空 matcher、重复 name、重复 email。 | 抛出 `GitInsightConfigError` 或 `AuthorAliasConfigError` 和对应英文错误。 |
 | 默认按原始签名解析作者 | `createAuthorIdentityResolver` | 同名但不同邮箱的两个提交，无作者合并配置。 | 两个签名保持独立，按原始邮箱匹配。 |
 | 按作者合并配置覆盖展示名称和邮箱 | `createAuthorIdentityResolver` | 配置把两个不同签名合并为 `Alice Team <team@example.com>`。 | 两个签名解析到同一个 identity；可通过展示邮箱和原始邮箱匹配。 |
 | 检测同一签名匹配多个作者合并组 | `createAuthorIdentityResolver` | 一个签名同时被一个 group 的 name 和另一个 group 的 email 命中。 | 抛出 `AuthorAliasConfigError`。 |
@@ -116,8 +121,8 @@ npm run build
 | 测试案例 | 被测对象 | 场景 | 预期 |
 | --- | --- | --- | --- |
 | daily 热力图同月内周列不增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-06 到 2025-01-26 的连续日期。 | 布局宽度等于周列宽度总和；月份标签行宽度与布局一致。 |
-| daily 热力图不同月份边界增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-01 到 2025-04-30 的连续日期。 | 3 个月份边界各增加 1 个空格；1月、2月、3月、4月都显示。 |
-| daily 热力图跨月周使用新月份标记 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-02-24 到 2025-03-09，首周同时包含 2 月和 3 月。 | 月份标签行宽度等于布局宽度；首周显示 3月 标签。 |
+| daily 热力图不同月份边界增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-01 到 2025-04-30 的连续日期。 | 3 个月份边界各增加 1 个空格；Jan、Feb、Mar、Apr 都显示。 |
+| daily 热力图跨月周使用新月份标记 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-02-24 到 2025-03-09，首周同时包含 2 月和 3 月。 | 月份标签行宽度等于布局宽度；首周显示 Mar 标签。 |
 
 ## 维护建议
 

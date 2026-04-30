@@ -9,15 +9,16 @@ test('parseArgs 使用默认范围', () => {
 
 	assert.equal(options.rangeRequest.kind, 'fixed');
 	assert.equal(options.me, undefined);
+	assert.equal(options.language, 'en');
 	assert.equal(options.rangeRequest.range.kind, 'since');
-	assert.equal(options.rangeRequest.range.label, '最近 365 天');
+	assert.equal(options.rangeRequest.range.label, 'Last 365 days');
 	assert.equal(options.rangeRequest.range.dayCount, 365);
 });
 
 test('parseArgs 解析合法时间范围', () => {
 	const last = parseArgs(argv('--last', '7'));
 	assert.equal(last.rangeRequest.kind, 'fixed');
-	assert.equal(last.rangeRequest.range.label, '最近 7 天');
+	assert.equal(last.rangeRequest.range.label, 'Last 7 days');
 	assert.equal(last.rangeRequest.range.dayCount, 7);
 
 	const year = parseArgs(argv('--year', '2025'));
@@ -52,14 +53,14 @@ test('parseArgs 解析仓库、作者和分支参数', () => {
 });
 
 test('parseArgs 拒绝非法日期和互斥参数', () => {
-	assert.throws(() => parseArgs(argv('--last', '0')), /--last 必须是正整数/);
-	assert.throws(() => parseArgs(argv('--last', '3651')), /--last 最大支持 3650 天/);
-	assert.throws(() => parseArgs(argv('--month', '2025-13')), /月份必须在 01 到 12 之间/);
-	assert.throws(() => parseArgs(argv('--from', '2025-02-30')), /必须是存在的日期/);
-	assert.throws(() => parseArgs(argv('--last', '7', '--year', '2025')), /--last、--year、--month 只能指定一个/);
-	assert.throws(() => parseArgs(argv('--month', '2025-04', '--from', '2025-04-01')), /--from\/--to 不能和 --last、--year、--month 同时使用/);
-	assert.throws(() => parseArgs(argv('--from', '2025', '--to', '2025-04')), /--from 和 --to 同时使用时必须采用相同格式/);
-	assert.throws(() => parseArgs(argv('--author', 'alice', '--me')), /--author 和 --me 只能指定一个/);
+	assert.throws(() => parseArgs(argv('--last', '0')), /--last must be a positive integer/);
+	assert.throws(() => parseArgs(argv('--last', '3651')), /--last supports at most 3650 days/);
+	assert.throws(() => parseArgs(argv('--month', '2025-13')), /month must be between 01 and 12/);
+	assert.throws(() => parseArgs(argv('--from', '2025-02-30')), /must be an existing date/);
+	assert.throws(() => parseArgs(argv('--last', '7', '--year', '2025')), /Specify only one of --last, --year, and --month/);
+	assert.throws(() => parseArgs(argv('--month', '2025-04', '--from', '2025-04-01')), /--from\/--to cannot be used with --last, --year, or --month/);
+	assert.throws(() => parseArgs(argv('--from', '2025', '--to', '2025-04')), /--from and --to must use the same format/);
+	assert.throws(() => parseArgs(argv('--author', 'alice', '--me')), /Specify only one of --author and --me/);
 });
 
 test('createCustomDateRange 处理自定义范围边界', () => {
@@ -96,5 +97,5 @@ test('createCustomDateRange 处理自定义范围边界', () => {
 			startDate: '2025-04-30',
 			endDate: '2025-04-30'
 		}
-	}), /--from 不能晚于 --to/);
+	}), /--from cannot be later than --to/);
 });

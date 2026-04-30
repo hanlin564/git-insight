@@ -16,7 +16,7 @@ test('daily 热力图同月内周列不增加额外间距', () => {
 
 	assert.equal(getDailyHeatmapLayoutWidth(layout), weeks.length * 2);
 	assert.equal(labels.length, getDailyHeatmapLayoutWidth(layout));
-	assert.equal(labels.indexOf('1月'), 0);
+	assert.equal(labels.indexOf('Jan'), 0);
 });
 
 test('daily 热力图不同月份边界增加额外间距', () => {
@@ -26,10 +26,10 @@ test('daily 热力图不同月份边界增加额外间距', () => {
 
 	assert.equal(getDailyHeatmapLayoutWidth(layout), weeks.length * 2 + 3);
 	assert.equal(labels.length, getDailyHeatmapLayoutWidth(layout));
-	assert.equal(labels.indexOf('1月'), 0);
-	assert.notEqual(labels.indexOf('2月'), -1);
-	assert.notEqual(labels.indexOf('3月'), -1);
-	assert.notEqual(labels.indexOf('4月'), -1);
+	assert.equal(labels.indexOf('Jan'), 0);
+	assert.notEqual(labels.indexOf('Feb'), -1);
+	assert.notEqual(labels.indexOf('Mar'), -1);
+	assert.notEqual(labels.indexOf('Apr'), -1);
 });
 
 test('daily 热力图跨月周使用新月份标记', () => {
@@ -38,7 +38,7 @@ test('daily 热力图跨月周使用新月份标记', () => {
 	const labels = buildMonthLabels(layout);
 
 	assert.equal(labels.length, getDailyHeatmapLayoutWidth(layout));
-	assert.equal(labels.indexOf('3月'), 0);
+	assert.equal(labels.indexOf('Mar'), 0);
 });
 
 function periodsBetween(startDate: string, endDate: string): HeatmapPeriodCount[] {

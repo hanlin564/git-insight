@@ -1,4 +1,5 @@
 import type {CommitRecord} from '../git/types.js';
+import {DEFAULT_LANGUAGE, getMessages, type SupportedLanguage} from '../i18n.js';
 import {matchesText} from '../utils/text.js';
 import {AuthorAliasConfigError, type AuthorAliasGroup, type AuthorAliasLookup} from './authorAliases.js';
 
@@ -33,9 +34,10 @@ type AuthorSignature = {
 
 export function createAuthorIdentityResolver(
 	commits: CommitRecord[],
-	aliases: AuthorAliasLookup
+	aliases: AuthorAliasLookup,
+	language: SupportedLanguage = DEFAULT_LANGUAGE
 ): AuthorIdentityResolver {
-	const identitiesBySignature = buildIdentityGroups(commits, aliases);
+	const identitiesBySignature = buildIdentityGroups(commits, aliases, language);
 
 	const resolve = (commit: CommitRecord): ResolvedAuthorIdentity => {
 		const identity = identitiesBySignature.get(getSignatureKey(commit.authorName, commit.authorEmail));
@@ -93,8 +95,10 @@ export function createAuthorIdentityResolver(
 
 function buildIdentityGroups(
 	commits: CommitRecord[],
-	aliases: AuthorAliasLookup
+	aliases: AuthorAliasLookup,
+	language: SupportedLanguage
 ): Map<string, ResolvedAuthorIdentity> {
+	const t = getMessages(language);
 	const signatures = collectSignatures(commits);
 	const union = new UnionFind();
 	const groupBySignature = new Map<string, AuthorAliasGroup>();
@@ -130,7 +134,7 @@ function buildIdentityGroups(
 
 			if (existingGroup && existingGroup.key !== group.key) {
 				const signature = signatures.get(signatureKey);
-				throw new AuthorAliasConfigError(`作者签名同时匹配多个作者合并组：${formatSignature(signature)}`);
+				throw new AuthorAliasConfigError(t.config.signatureMatchesMultipleGroups(formatSignature(signature, language)));
 			}
 
 			groupBySignature.set(signatureKey, group);
@@ -154,7 +158,7 @@ function buildIdentityGroups(
 	const identitiesBySignature = new Map<string, ResolvedAuthorIdentity>();
 
 	for (const groupSignatures of signaturesByRoot.values()) {
-		const identity = createGroupIdentity(groupSignatures, groupBySignature);
+		const identity = createGroupIdentity(groupSignatures, groupBySignature, language);
 
 		for (const signature of groupSignatures) {
 			identitiesBySignature.set(signature.key, identity);
@@ -190,9 +194,10 @@ function collectSignatures(commits: CommitRecord[]): Map<string, AuthorSignature
 
 function createGroupIdentity(
 	signatures: AuthorSignature[],
-	groupBySignature: Map<string, AuthorAliasGroup>
+	groupBySignature: Map<string, AuthorAliasGroup>,
+	language: SupportedLanguage
 ): ResolvedAuthorIdentity {
-	const aliasGroup = getAliasGroup(signatures, groupBySignature);
+	const aliasGroup = getAliasGroup(signatures, groupBySignature, language);
 	const aliasNames = aliasGroup ? aliasGroup.names : [];
 	const displayNames = aliasGroup?.displayName ? [aliasGroup.displayName] : [];
 	const signatureEmails = uniqueValues(signatures.map(signature => signature.authorEmail));
@@ -244,8 +249,10 @@ function getResolvedAuthorKey(
 
 function getAliasGroup(
 	signatures: AuthorSignature[],
-	groupBySignature: Map<string, AuthorAliasGroup>
+	groupBySignature: Map<string, AuthorAliasGroup>,
+	language: SupportedLanguage
 ): AuthorAliasGroup | undefined {
+	const t = getMessages(language);
 	let aliasGroup: AuthorAliasGroup | undefined;
 
 	for (const signature of signatures) {
@@ -256,7 +263,7 @@ function getAliasGroup(
 		}
 
 		if (aliasGroup && aliasGroup.key !== currentGroup.key) {
-			throw new AuthorAliasConfigError(`作者合并组解析冲突：${formatSignature(signature)}`);
+			throw new AuthorAliasConfigError(t.config.groupResolveConflict(formatSignature(signature, language)));
 		}
 
 		aliasGroup = currentGroup;
@@ -265,9 +272,9 @@ function getAliasGroup(
 	return aliasGroup;
 }
 
-function formatSignature(signature?: AuthorSignature): string {
+function formatSignature(signature: AuthorSignature | undefined, language: SupportedLanguage): string {
 	if (!signature) {
-		return '未知作者';
+		return getMessages(language).ui.unknownAuthor;
 	}
 
 	return `${signature.authorName} <${signature.authorEmail}>`;

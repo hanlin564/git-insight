@@ -4,16 +4,22 @@ import type {DateRange} from '../utils/date.js';
 import type {GitUserIdentity, LocalBranchRef, RepositoryTarget} from './types.js';
 
 export class GitRepositoryError extends Error {
+	readonly repoPath: string;
+
 	constructor(repoPath: string) {
-		super(`目录不是 Git 仓库：${repoPath}`);
+		super(`Not a Git repository: ${repoPath}`);
 		this.name = 'GitRepositoryError';
+		this.repoPath = repoPath;
 	}
 }
 
 export class GitBranchError extends Error {
+	readonly branchName: string;
+
 	constructor(branchName: string) {
-		super(`找不到指定分支：${branchName}`);
+		super(`Branch not found: ${branchName}`);
 		this.name = 'GitBranchError';
+		this.branchName = branchName;
 	}
 }
 

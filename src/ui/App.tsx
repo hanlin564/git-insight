@@ -3,6 +3,7 @@ import {Box, Text} from 'ink';
 import type {CliOptions} from '../cli/parseArgs.js';
 import type {RepositoryStatsResult} from '../analysis/collectRepositoryStats.js';
 import type {GitUserIdentity} from '../git/types.js';
+import {getMessages, type SupportedLanguage} from '../i18n.js';
 import {Section} from './components/Section.js';
 import {ContributionHeatmap} from './components/ContributionHeatmap.js';
 import {AuthorRanking} from './components/AuthorRanking.js';
@@ -14,60 +15,62 @@ type AppProps = {
 };
 
 export function App({options, result}: AppProps) {
+	const t = getMessages(options.language).ui;
+
 	if (!result.ok) {
 		return (
 			<Box flexDirection="column">
 				<Text color="green" bold>Git Insight</Text>
 				<Text color="red">{result.error}</Text>
-				<Text color="gray">请检查 --repo、--branch，或项目/全局 .git-insight.json。</Text>
+				<Text color="gray">{t.checkInputHint}</Text>
 			</Box>
 		);
 	}
 
 	const {stats} = result;
 	const hasAuthorData = stats.authorStats.length > 0;
-	const heatmapTitle = options.me ? '当前 Git 用户贡献热力图' : '仓库贡献热力图';
+	const heatmapTitle = options.me ? t.currentUserHeatmapTitle : t.repositoryHeatmapTitle;
 	const heatmapScope = options.me
-		? `统计口径：当前 Git 用户 ${formatGitUser(stats.currentGitUser)}`
-		: '统计口径：仓库内所有匹配作者';
+		? t.currentUserHeatmapScope(formatGitUser(stats.currentGitUser, options.language))
+		: t.repositoryHeatmapScope;
 
 	return (
 		<Box flexDirection="column">
 			<Text color="green" bold>Git Insight</Text>
-			<Text>仓库：<Text color="cyan">{stats.repository.name}</Text></Text>
-			<Text>当前分支: <Text color="cyan">{stats.currentBranchName}</Text></Text>
-			<Text>分析分支: <Text color="cyan">{stats.analysisBranchName}</Text></Text>
-			<Text>统计范围：{stats.range.label}</Text>
-			{options.author && <Text>作者过滤：{options.author}</Text>}
-			{options.me && <Text>当前用户：{formatGitUser(stats.currentGitUser)}</Text>}
+			<Text>{t.repository} <Text color="cyan">{stats.repository.name}</Text></Text>
+			<Text>{t.currentBranch} <Text color="cyan">{stats.currentBranchName}</Text></Text>
+			<Text>{t.analysisBranch} <Text color="cyan">{stats.analysisBranchName}</Text></Text>
+			<Text>{t.dateRange} {stats.range.label}</Text>
+			{options.author && <Text>{t.authorFilter} {options.author}</Text>}
+			{options.me && <Text>{t.currentUser} {formatGitUser(stats.currentGitUser, options.language)}</Text>}
 			<Text> </Text>
 
-			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}
+			{!hasAuthorData && <Text color="yellow">{t.noMatchingCommits}</Text>}
 
 			{stats.heatmap && (
 				<Section title={heatmapTitle}>
 					<Text color="gray">{heatmapScope}</Text>
-					<ContributionHeatmap heatmap={stats.heatmap} />
+					<ContributionHeatmap heatmap={stats.heatmap} language={options.language} />
 				</Section>
 			)}
 
 			{!options.branch && stats.branchGroups && (
-				<BranchActivity groups={stats.branchGroups} />
+				<BranchActivity groups={stats.branchGroups} language={options.language} />
 			)}
 
-			{hasAuthorData && <AuthorRanking stats={stats} showCurrentUserContext={options.me} />}
+			{hasAuthorData && <AuthorRanking stats={stats} showCurrentUserContext={options.me} language={options.language} />}
 		</Box>
 	);
 }
 
-function formatGitUser(user?: GitUserIdentity): string {
+function formatGitUser(user: GitUserIdentity | undefined, language: SupportedLanguage): string {
 	if (!user) {
-		return '未读取到';
+		return getMessages(language).ui.missingGitUser;
 	}
 
 	if (user.name && user.email) {
 		return `${user.name} <${user.email}>`;
 	}
 
-	return user.name ?? user.email ?? '未读取到';
+	return user.name ?? user.email ?? getMessages(language).ui.missingGitUser;
 }

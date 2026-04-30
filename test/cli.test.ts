@@ -18,11 +18,11 @@ test('按指定月份统计临时仓库提交，并输出排行榜', async t => 
 
 	assert.equal(result.exitCode, 0, result.output);
 	assert.match(result.output, /Git Insight/);
-	assert.match(result.output, new RegExp(`仓库：\\s*${escapeRegExp(repo.name)}`));
-	assert.match(result.output, /当前分支:\s+main/);
-	assert.match(result.output, /分析分支:\s+main/);
-	assert.match(result.output, /统计范围：\s*2025-04/);
-	assert.match(result.output, /提交数排行榜/);
+	assert.match(result.output, new RegExp(`Repository:\\s*${escapeRegExp(repo.name)}`));
+	assert.match(result.output, /Current branch:\s+main/);
+	assert.match(result.output, /Analysis branch:\s+main/);
+	assert.match(result.output, /Date range:\s*2025-04/);
+	assert.match(result.output, /Commit Count Ranking/);
 	assert.match(result.output, /Alice/);
 	assert.match(result.output, /Bob/);
 	assert.doesNotMatch(result.output, /Carol/);
@@ -58,7 +58,7 @@ test('支持 --last 统计最近 N 天提交', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /统计范围：\s*最近 7 天/);
+	assert.match(result.output, /Date range:\s*Last 7 days/);
 	assert.match(result.output, /Recent Author/);
 	assert.doesNotMatch(result.output, /Old Author/);
 });
@@ -90,7 +90,7 @@ test('支持 --year 只统计指定年份提交', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /统计范围：\s*2025/);
+	assert.match(result.output, /Date range:\s*2025/);
 	assert.match(result.output, /Target Year/);
 	assert.doesNotMatch(result.output, /Last Year/);
 });
@@ -125,7 +125,7 @@ test('支持单独使用 --from 统计到今天', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, new RegExp(`统计范围：\\s*${escapeRegExp(includedDate)}\\.\\.今天`));
+	assert.match(result.output, new RegExp(`Date range:\\s*${escapeRegExp(includedDate)}\\.\\.today`));
 	assert.match(result.output, /Included Author/);
 	assert.doesNotMatch(result.output, /Excluded Author/);
 });
@@ -157,7 +157,7 @@ test('支持单独使用 --to 从首个提交统计到指定日期', async t => 
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /统计范围：\s*首个提交\.\.2025-01-31/);
+	assert.match(result.output, /Date range:\s*first commit\.\.2025-01-31/);
 	assert.match(result.output, /First Author/);
 	assert.doesNotMatch(result.output, /After Author/);
 });
@@ -194,11 +194,11 @@ test('支持 --branch 分析指定分支，而不是当前分支', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /当前分支:\s+main/);
-	assert.match(result.output, /分析分支:\s+feature\/report/);
+	assert.match(result.output, /Current branch:\s+main/);
+	assert.match(result.output, /Analysis branch:\s+feature\/report/);
 	assert.match(result.output, /Branch User/);
-	assert.doesNotMatch(result.output, /^活跃分支$/m);
-	assert.doesNotMatch(result.output, /^不活跃分支$/m);
+	assert.doesNotMatch(result.output, /^Active Branches$/m);
+	assert.doesNotMatch(result.output, /^Stale Branches$/m);
 });
 
 test('未指定 --branch 时展示活跃和不活跃分支', async t => {
@@ -235,10 +235,10 @@ test('未指定 --branch 时展示活跃和不活跃分支', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /^活跃分支$/m);
+	assert.match(result.output, /^Active Branches$/m);
 	assert.match(result.output, new RegExp(`feature/active\\s+${escapeRegExp(recentDate)}`));
-	assert.match(result.output, /^不活跃分支$/m);
-	assert.match(result.output, new RegExp(`当前 feature/stale\\s+${escapeRegExp(staleDate)}`));
+	assert.match(result.output, /^Stale Branches$/m);
+	assert.match(result.output, new RegExp(`current feature/stale\\s+${escapeRegExp(staleDate)}`));
 });
 
 test('支持 detached HEAD 状态下分析当前提交', async t => {
@@ -264,8 +264,8 @@ test('支持 detached HEAD 状态下分析当前提交', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /当前分支:\s+HEAD/);
-	assert.match(result.output, /分析分支:\s+HEAD/);
+	assert.match(result.output, /Current branch:\s+HEAD/);
+	assert.match(result.output, /Analysis branch:\s+HEAD/);
 	assert.match(result.output, /Detached User/);
 });
 
@@ -284,7 +284,7 @@ test('支持 --author 过滤作者数据', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /作者过滤：\s*bob@example.com/);
+	assert.match(result.output, /Author filter:\s*bob@example.com/);
 	assert.match(result.output, /Bob/);
 	assert.doesNotMatch(result.output, /Alice/);
 });
@@ -304,9 +304,9 @@ test('支持 --me 使用临时仓库本地 Git 用户配置', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /当前用户：\s*Bob <bob@example.com>/);
-	assert.match(result.output, /你的排名/);
-	assert.match(result.output, /你 Bob/);
+	assert.match(result.output, /Current user:\s*Bob <bob@example.com>/);
+	assert.match(result.output, /Your rank/);
+	assert.match(result.output, /you Bob/);
 });
 
 test('使用 --me 但仓库没有 Git 用户配置时返回可读错误', async t => {
@@ -331,7 +331,7 @@ test('使用 --me 但仓库没有 Git 用户配置时返回可读错误', async 
 	]);
 
 	assert.equal(result.exitCode, 1, result.output);
-	assert.match(result.output, /未读取到当前 Git 配置用户/);
+	assert.match(result.output, /Could not read the current Git configured user/);
 });
 
 test('空仓库会输出无提交数据提示', async t => {
@@ -347,8 +347,8 @@ test('空仓库会输出无提交数据提示', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /当前统计范围内没有匹配的提交数据/);
-	assert.doesNotMatch(result.output, /排行榜/);
+	assert.match(result.output, /No matching commit data in the current date range/);
+	assert.doesNotMatch(result.output, /Ranking/);
 });
 
 test('非 Git 目录会返回可读错误', async t => {
@@ -360,7 +360,7 @@ test('非 Git 目录会返回可读错误', async t => {
 	const result = await runGitInsight(t, ['--repo', dirPath]);
 
 	assert.equal(result.exitCode, 1, result.output);
-	assert.match(result.output, /目录不是 Git 仓库/);
+	assert.match(result.output, /Not a Git repository/);
 });
 
 test('不存在的分支会返回可读错误', async t => {
@@ -374,41 +374,104 @@ test('不存在的分支会返回可读错误', async t => {
 	]);
 
 	assert.equal(result.exitCode, 1, result.output);
-	assert.match(result.output, /找不到指定分支：missing-branch/);
+	assert.match(result.output, /Branch not found: missing-branch/);
 });
 
 test('参数组合非法时返回可读错误', async t => {
 	const result = await runGitInsight(t, ['--last', '7', '--month', '2025-04']);
 
 	assert.equal(result.exitCode, 1, result.output);
-	assert.match(result.output, /--last、--year、--month 只能指定一个/);
+	assert.match(result.output, /Specify only one of --last, --year, and --month/);
 });
 
-test('未知参数会返回中文错误', async t => {
+test('未知参数默认返回英文错误', async t => {
 	const result = await runGitInsight(t, ['--since']);
 
 	assert.equal(result.exitCode, 1, result.output);
-	assert.match(result.output, /错误：未知选项 '--since'/);
-	assert.doesNotMatch(result.output, /unknown option/);
+	assert.match(result.output, /error: unknown option '--since'/);
+	assert.doesNotMatch(result.output, /错误：未知选项/);
 });
 
 test('移除的显示开关会返回未知参数错误', async t => {
 	const result = await runGitInsight(t, ['--no-heatmap']);
 
 	assert.equal(result.exitCode, 1, result.output);
-	assert.match(result.output, /错误：未知选项 '--no-heatmap'/);
-	assert.doesNotMatch(result.output, /unknown option/);
+	assert.match(result.output, /error: unknown option '--no-heatmap'/);
+	assert.doesNotMatch(result.output, /错误：未知选项/);
 });
 
 test('帮助命令输出关键参数说明', async t => {
 	const result = await runGitInsight(t, ['--help']);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /用法：/);
-	assert.match(result.output, /选项：/);
+	assert.match(result.output, /Usage:/);
+	assert.match(result.output, /Options:/);
 	assert.match(result.output, /--repo <path>/);
 	assert.match(result.output, /--from <date>/);
 	assert.match(result.output, /--me/);
+});
+
+test('仓库配置 language 为 zh 时输出中文界面', async t => {
+	const repo = await createRepositoryWithHistory(t);
+	await repo.writeConfig(JSON.stringify({language: 'zh'}));
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--month',
+		'2025-04'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, new RegExp(`仓库：\\s*${escapeRegExp(repo.name)}`));
+	assert.match(result.output, /当前分支:\s+main/);
+	assert.match(result.output, /分析分支:\s+main/);
+	assert.match(result.output, /统计范围：\s*2025-04/);
+	assert.match(result.output, /提交数排行榜/);
+	assert.doesNotMatch(result.output, /Repository:/);
+});
+
+test('仓库配置 language 为 en 时输出英文界面', async t => {
+	const repo = await createRepositoryWithHistory(t);
+	await repo.writeConfig(JSON.stringify({language: 'en'}));
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--month',
+		'2025-04'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, new RegExp(`Repository:\\s*${escapeRegExp(repo.name)}`));
+	assert.match(result.output, /Current branch:\s+main/);
+	assert.match(result.output, /Date range:\s*2025-04/);
+	assert.doesNotMatch(result.output, /仓库：/);
+});
+
+test('中文配置下帮助和未知参数输出中文', async t => {
+	const repo = await createTempGitRepository(t);
+	await repo.writeConfig(JSON.stringify({language: 'zh'}));
+
+	const help = await runGitInsight(t, ['--repo', repo.path, '--help']);
+	assert.equal(help.exitCode, 0, help.output);
+	assert.match(help.output, /用法：/);
+	assert.match(help.output, /选项：/);
+
+	const unknownOption = await runGitInsight(t, ['--repo', repo.path, '--since']);
+	assert.equal(unknownOption.exitCode, 1, unknownOption.output);
+	assert.match(unknownOption.output, /错误：未知选项 '--since'/);
+	assert.doesNotMatch(unknownOption.output, /error: unknown option/);
+});
+
+test('非法 language 配置会返回可读错误', async t => {
+	const repo = await createTempGitRepository(t);
+	await repo.writeConfig(JSON.stringify({language: 'ja'}));
+
+	const result = await runGitInsight(t, ['--repo', repo.path, '--help']);
+
+	assert.equal(result.exitCode, 1, result.output);
+	assert.match(result.output, /Git Insight config language must be "en" or "zh"/);
 });
 
 test('临时仓库内的作者合并配置会参与命令统计', async t => {
