@@ -98,6 +98,16 @@ npm run build
 | 超过一年使用 monthly 粒度并支持作者过滤 | `collectContributionHeatmap` | 486 天范围内，Alice 在 2024-01 有两个提交，Bob 在 2025-04 有一个提交；按 Alice 过滤。 | granularity 为 `monthly`；`2024-01` count 为 2；`2025-04` count 为 0。 |
 | 无匹配提交时返回 undefined | `collectContributionHeatmap` | 按不存在的作者过滤。 | 返回 `undefined`，调用方不会渲染热力图。 |
 
+## 热力图 UI 单测
+
+文件：`test/ui/contributionHeatmap.test.ts`
+
+| 测试案例 | 被测对象 | 场景 | 预期 |
+| --- | --- | --- | --- |
+| daily 热力图同月内周列不增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-06 到 2025-01-26 的连续日期。 | 布局宽度等于周列宽度总和；月份标签行宽度与布局一致。 |
+| daily 热力图不同月份边界增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-01 到 2025-04-30 的连续日期。 | 3 个月份边界各增加 1 个空格；Jan、Feb、Mar、Apr 都显示。 |
+| daily 热力图跨月周使用新月份标记 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-02-24 到 2025-03-09，首周同时包含 2 月和 3 月。 | 月份标签行宽度等于布局宽度；首周显示 Mar 标签。 |
+
 ## 维护建议
 
 - 新增 CLI 参数或展示行为时，优先补充 `test/cli.test.ts` 的端到端测试，并继续使用临时仓库夹具构造场景。

@@ -8,7 +8,13 @@ type ContributionHeatmapProps = {
 	heatmap: ContributionHeatmapStat;
 };
 
-type WeekColumn = Array<HeatmapPeriodCount | undefined>;
+export type WeekColumn = Array<HeatmapPeriodCount | undefined>;
+
+type DailyHeatmapColumn = {
+	week: WeekColumn;
+	prefix: string;
+	monthLabel?: string;
+};
 
 type YearRow = {
 	year: string;
@@ -18,6 +24,7 @@ type YearRow = {
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const COLORS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
+const DAILY_WEEK_COLUMN_WIDTH = 2;
 
 export function ContributionHeatmap({heatmap}: ContributionHeatmapProps) {
 	if (heatmap.granularity === 'monthly') {
@@ -29,7 +36,8 @@ export function ContributionHeatmap({heatmap}: ContributionHeatmapProps) {
 
 function DailyHeatmap({heatmap}: ContributionHeatmapProps) {
 	const weeks = buildWeeks(heatmap.periods);
-	const monthLabels = buildMonthLabels(weeks);
+	const layout = buildDailyHeatmapLayout(weeks);
+	const monthLabels = buildMonthLabels(layout);
 
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
@@ -38,8 +46,11 @@ function DailyHeatmap({heatmap}: ContributionHeatmapProps) {
 			{WEEKDAY_LABELS.map((label, rowIndex) => (
 				<Text key={label}>
 					<Text color="gray">{label}   </Text>
-					{weeks.map((week, weekIndex) => (
-						<Text key={`${label}-${weekIndex}`} color={getDailyColor(week[rowIndex]?.count ?? 0)}>■ </Text>
+					{layout.map((column, weekIndex) => (
+						<React.Fragment key={`${label}-${weekIndex}`}>
+							{column.prefix && <Text>{column.prefix}</Text>}
+							<Text color={getDailyColor(column.week[rowIndex]?.count ?? 0)}>■ </Text>
+						</React.Fragment>
 					))}
 				</Text>
 			))}
@@ -79,7 +90,7 @@ function Legend() {
 	);
 }
 
-function buildWeeks(periods: HeatmapPeriodCount[]): WeekColumn[] {
+export function buildWeeks(periods: HeatmapPeriodCount[]): WeekColumn[] {
 	if (periods.length === 0) {
 		return [];
 	}
@@ -106,23 +117,77 @@ function buildWeeks(periods: HeatmapPeriodCount[]): WeekColumn[] {
 	return weeks;
 }
 
-function buildMonthLabels(weeks: WeekColumn[]): string {
+export function buildDailyHeatmapLayout(weeks: WeekColumn[]): DailyHeatmapColumn[] {
 	let previousMonth = '';
 
 	return weeks.map(week => {
-		const firstPeriod = week.find(Boolean);
-		if (!firstPeriod) {
-			return '  ';
+		const firstNewMonthPeriod = findMonthLabelPeriod(week, previousMonth);
+		const column: DailyHeatmapColumn = {
+			week,
+			prefix: firstNewMonthPeriod && previousMonth !== '' ? ' ' : ''
+		};
+
+		if (!firstNewMonthPeriod) {
+			return column;
 		}
 
-		const label = getMonthLabel(firstPeriod.period);
-		if (label === previousMonth) {
-			return '  ';
+		previousMonth = getMonthKey(firstNewMonthPeriod.period);
+		column.monthLabel = getMonthLabel(firstNewMonthPeriod.period);
+		return column;
+	});
+}
+
+export function buildMonthLabels(layout: DailyHeatmapColumn[]): string {
+	let cursor = 0;
+	const labels = Array.from({length: getDailyHeatmapLayoutWidth(layout)}, () => ' ');
+
+	for (const column of layout) {
+		cursor += column.prefix.length;
+
+		if (column.monthLabel) {
+			for (let index = 0; index < column.monthLabel.length && cursor + index < labels.length; index += 1) {
+				labels[cursor + index] = column.monthLabel[index] ?? ' ';
+			}
 		}
 
-		previousMonth = label;
-		return label.padEnd(4, ' ');
-	}).join('');
+		cursor += DAILY_WEEK_COLUMN_WIDTH;
+	}
+
+	return labels.join('');
+}
+
+export function getDailyHeatmapLayoutWidth(layout: DailyHeatmapColumn[]): number {
+	return layout.reduce(
+		(width, column) => width + column.prefix.length + DAILY_WEEK_COLUMN_WIDTH,
+		0
+	);
+}
+
+function findMonthLabelPeriod(week: WeekColumn, previousMonth: string): HeatmapPeriodCount | undefined {
+	const periods = week.filter(period => period !== undefined);
+	if (periods.length === 0) {
+		return undefined;
+	}
+
+	const newMonthPeriods = periods.filter(period => getMonthKey(period.period) !== previousMonth);
+	if (newMonthPeriods.length === 0) {
+		return undefined;
+	}
+
+	if (previousMonth === '' && hasMultipleMonths(newMonthPeriods)) {
+		return newMonthPeriods.at(-1);
+	}
+
+	return newMonthPeriods[0];
+}
+
+function hasMultipleMonths(periods: HeatmapPeriodCount[]): boolean {
+	const months = new Set(periods.map(period => getMonthKey(period.period)));
+	return months.size > 1;
+}
+
+function getMonthKey(dateText: string): string {
+	return dateText.slice(0, 7);
 }
 
 function buildYearRows(periods: HeatmapPeriodCount[]): YearRow[] {
