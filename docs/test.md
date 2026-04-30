@@ -33,16 +33,16 @@ npm run build
 
 | 测试案例 | 命令形态 | 场景 | 预期 |
 | --- | --- | --- | --- |
-| 按指定月份统计临时仓库提交，并输出排行榜 | `git-insight --repo <临时仓库> --month 2025-04 --no-heatmap` | 仓库包含 2025-03 的 Carol 提交，以及 2025-04 的 Alice、Bob 提交。 | 退出码为 `0`；输出仓库名、`当前分支: main`、`分析分支: main`、`Range: 2025-04`、提交数排行榜、Alice、Bob；不输出 Carol 和热力图标题。 |
-| 支持 `--last` 统计最近 N 天提交 | `git-insight --repo <临时仓库> --last 7 --no-heatmap` | 仓库包含最近 7 天内的 Recent Author 提交，以及 10 天前的 Old Author 提交。 | 退出码为 `0`；输出 `Range: last 7 days` 和 Recent Author；不输出 Old Author。 |
-| 支持 `--year` 只统计指定年份提交 | `git-insight --repo <临时仓库> --year 2025 --no-heatmap` | 仓库包含 2024-12-31 和 2025-01-01 两个提交。 | 退出码为 `0`；输出 `Range: 2025` 和 Target Year；不输出 Last Year。 |
-| 支持单独使用 `--from` 统计到今天 | `git-insight --repo <临时仓库> --from <日期> --no-heatmap` | 仓库包含指定起始日期前后的提交。 | 退出码为 `0`；输出 `<日期>..now`；只输出范围内作者。 |
-| 支持单独使用 `--to` 从首个提交统计到指定日期 | `git-insight --repo <临时仓库> --to 2025-01-31 --no-heatmap` | 仓库首个提交在 2025-01-10，另有 2025-02-10 提交。 | 退出码为 `0`；输出 `first commit..2025-01-31` 和 First Author；不输出 After Author。 |
+| 按指定月份统计临时仓库提交，并输出排行榜 | `git-insight --repo <临时仓库> --month 2025-04 --no-heatmap` | 仓库包含 2025-03 的 Carol 提交，以及 2025-04 的 Alice、Bob 提交。 | 退出码为 `0`；输出仓库名、`当前分支: main`、`分析分支: main`、`统计范围：2025-04`、提交数排行榜、Alice、Bob；不输出 Carol 和热力图标题。 |
+| 支持 `--last` 统计最近 N 天提交 | `git-insight --repo <临时仓库> --last 7 --no-heatmap` | 仓库包含最近 7 天内的 Recent Author 提交，以及 10 天前的 Old Author 提交。 | 退出码为 `0`；输出 `统计范围：最近 7 天` 和 Recent Author；不输出 Old Author。 |
+| 支持 `--year` 只统计指定年份提交 | `git-insight --repo <临时仓库> --year 2025 --no-heatmap` | 仓库包含 2024-12-31 和 2025-01-01 两个提交。 | 退出码为 `0`；输出 `统计范围：2025` 和 Target Year；不输出 Last Year。 |
+| 支持单独使用 `--from` 统计到今天 | `git-insight --repo <临时仓库> --from <日期> --no-heatmap` | 仓库包含指定起始日期前后的提交。 | 退出码为 `0`；输出 `<日期>..今天`；只输出范围内作者。 |
+| 支持单独使用 `--to` 从首个提交统计到指定日期 | `git-insight --repo <临时仓库> --to 2025-01-31 --no-heatmap` | 仓库首个提交在 2025-01-10，另有 2025-02-10 提交。 | 退出码为 `0`；输出 `首个提交..2025-01-31` 和 First Author；不输出 After Author。 |
 | 支持 `--branch` 分析指定分支 | `git-insight --repo <临时仓库> --branch feature/report --from 2025-04-01 --to 2025-04-30 --no-heatmap` | 当前检出 `main`，指定分析 `feature/report`，该分支有 Branch User 提交。 | 退出码为 `0`；输出 `当前分支: main`、`分析分支: feature/report` 和 Branch User；不输出活跃/不活跃分支。 |
 | 未指定 `--branch` 时展示活跃和不活跃分支 | `git-insight --repo <临时仓库> --last 3650 --no-heatmap` | 仓库包含默认分支、最近 90 天内提交的 `feature/active`，以及超过 90 天未提交的 `feature/stale`。 | 退出码为 `0`；输出 `活跃分支`、`feature/active`、`不活跃分支` 和当前 `feature/stale`。 |
 | 支持 `--no-branch-activity` 关闭活跃和不活跃分支 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --no-heatmap --no-branch-activity` | 仓库存在统计范围内提交。 | 退出码为 `0`；不输出活跃/不活跃分支。 |
 | 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --no-heatmap` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `当前分支: HEAD`、`分析分支: HEAD` 和 Detached User。 |
-| 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com --no-heatmap` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `Author filter: bob@example.com` 和 Bob；不输出 Alice。 |
+| 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com --no-heatmap` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `作者过滤：bob@example.com` 和 Bob；不输出 Alice。 |
 | 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me --no-heatmap` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`你的排名`，并以 `你 Bob` 展示当前用户。 |
 | 使用 `--me` 但仓库没有 Git 用户配置时返回可读错误 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 临时仓库不配置本地 `user.name` 和 `user.email`，运行环境也隔离了 HOME。 | 退出码为 `1`；输出 `未读取到当前 Git 配置用户`。 |
 | 支持 `--no-heatmap` 和 `--no-ranking` 只输出仓库摘要 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --no-heatmap --no-ranking` | 仓库存在统计范围内提交，同时关闭热力图和排行榜。 | 退出码为 `0`；输出基础摘要；不输出热力图标题和任何排行榜标题。 |
@@ -50,7 +50,8 @@ npm run build
 | 非 Git 目录会返回可读错误 | `git-insight --repo <临时非 Git 目录>` | 创建普通临时目录，不执行 `git init`。 | 退出码为 `1`；输出 `目录不是 Git 仓库`。 |
 | 不存在的分支会返回可读错误 | `git-insight --repo <临时仓库> --branch missing-branch` | 仓库存在提交，但指定分支不存在。 | 退出码为 `1`；输出 `找不到指定分支：missing-branch`。 |
 | 参数组合非法时返回可读错误 | `git-insight --last 7 --month 2025-04` | 同时指定互斥的固定时间范围。 | 退出码为 `1`；输出 `--last、--year、--month 只能指定一个`。 |
-| 帮助命令输出关键参数说明 | `git-insight --help` | 请求 CLI 帮助。 | 退出码为 `0`；输出 `Usage:`、`--repo <path>`、`--from <date>`、`--me`。 |
+| 未知参数会返回中文错误 | `git-insight --since` | 使用不支持的参数。 | 退出码为 `1`；输出 `错误：未知选项 '--since'`，不输出 `unknown option`。 |
+| 帮助命令输出关键参数说明 | `git-insight --help` | 请求 CLI 帮助。 | 退出码为 `0`；输出 `用法：`、`选项：`、`--repo <path>`、`--from <date>`、`--me`。 |
 | 临时仓库内的作者合并配置会参与命令统计 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author team@example.com --no-heatmap` | 仓库内 `.git-insight.json` 将 Alice 合并展示为 `Alice Team <team@example.com>`。 | 退出码为 `0`；输出 Alice Team；不输出 Bob。 |
 
 ## 参数解析单测
@@ -59,7 +60,7 @@ npm run build
 
 | 测试案例 | 被测对象 | 场景 | 预期 |
 | --- | --- | --- | --- |
-| `parseArgs` 使用默认范围和显示开关 | `parseArgs([])` | 不传任何参数。 | 默认使用 `last 365 days`；默认开启 heatmap/ranking/branchActivity。 |
+| `parseArgs` 使用默认范围和显示开关 | `parseArgs([])` | 不传任何参数。 | 默认使用 `最近 365 天`；默认开启 heatmap/ranking/branchActivity。 |
 | `parseArgs` 解析合法时间范围 | `parseArgs` | 分别传入 `--last 7`、`--year 2025`、`--month 2025-04`、`--from 2025-04-01 --to 2025-04-30`。 | 正确生成固定或自定义时间范围，开始/结束日期符合预期。 |
 | `parseArgs` 解析仓库、作者、分支和显示关闭参数 | `parseArgs` | 传入 `--repo`、`--branch`、`--author`、`--no-heatmap`、`--no-ranking`、`--no-branch-activity`。 | 仓库路径被解析为绝对路径；分支、作者和显示开关值正确。 |
 | `parseArgs` 拒绝非法日期和互斥参数 | `parseArgs` | 传入非法 `--last`、非法月份、不存在日期、互斥时间参数、`--author` 与 `--me` 同用。 | 抛出对应中文错误。 |
@@ -116,8 +117,8 @@ npm run build
 | 测试案例 | 被测对象 | 场景 | 预期 |
 | --- | --- | --- | --- |
 | daily 热力图同月内周列不增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-06 到 2025-01-26 的连续日期。 | 布局宽度等于周列宽度总和；月份标签行宽度与布局一致。 |
-| daily 热力图不同月份边界增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-01 到 2025-04-30 的连续日期。 | 3 个月份边界各增加 1 个空格；Jan、Feb、Mar、Apr 都显示。 |
-| daily 热力图跨月周使用新月份标记 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-02-24 到 2025-03-09，首周同时包含 2 月和 3 月。 | 月份标签行宽度等于布局宽度；首周显示 Mar 标签。 |
+| daily 热力图不同月份边界增加额外间距 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-01-01 到 2025-04-30 的连续日期。 | 3 个月份边界各增加 1 个空格；1月、2月、3月、4月都显示。 |
+| daily 热力图跨月周使用新月份标记 | `buildWeeks`、`buildDailyHeatmapLayout`、`buildMonthLabels` | 统计 2025-02-24 到 2025-03-09，首周同时包含 2 月和 3 月。 | 月份标签行宽度等于布局宽度；首周显示 3月 标签。 |
 
 ## 维护建议
 

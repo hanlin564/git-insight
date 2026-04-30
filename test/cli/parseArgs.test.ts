@@ -13,14 +13,14 @@ test('parseArgs 使用默认范围和显示开关', () => {
 	assert.equal(options.branchActivity, true);
 	assert.equal(options.me, undefined);
 	assert.equal(options.rangeRequest.range.kind, 'since');
-	assert.equal(options.rangeRequest.range.label, 'last 365 days');
+	assert.equal(options.rangeRequest.range.label, '最近 365 天');
 	assert.equal(options.rangeRequest.range.dayCount, 365);
 });
 
 test('parseArgs 解析合法时间范围', () => {
 	const last = parseArgs(argv('--last', '7'));
 	assert.equal(last.rangeRequest.kind, 'fixed');
-	assert.equal(last.rangeRequest.range.label, 'last 7 days');
+	assert.equal(last.rangeRequest.range.label, '最近 7 天');
 	assert.equal(last.rangeRequest.range.dayCount, 7);
 
 	const year = parseArgs(argv('--year', '2025'));

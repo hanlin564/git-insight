@@ -34,12 +34,12 @@ export function App({options, result}: AppProps) {
 	return (
 		<Box flexDirection="column">
 			<Text color="green" bold>Git Insight</Text>
-			<Text>Repository: <Text color="cyan">{stats.repository.name}</Text></Text>
+			<Text>仓库：<Text color="cyan">{stats.repository.name}</Text></Text>
 			<Text>当前分支: <Text color="cyan">{stats.currentBranchName}</Text></Text>
 			<Text>分析分支: <Text color="cyan">{stats.analysisBranchName}</Text></Text>
-			<Text>Range: {stats.range.label}</Text>
-			{options.author && <Text>Author filter: {options.author}</Text>}
-			{options.me && <Text>Current user: {formatGitUser(stats.currentGitUser)}</Text>}
+			<Text>统计范围：{stats.range.label}</Text>
+			{options.author && <Text>作者过滤：{options.author}</Text>}
+			{options.me && <Text>当前用户：{formatGitUser(stats.currentGitUser)}</Text>}
 			<Text> </Text>
 
 			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}

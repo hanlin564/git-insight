@@ -18,6 +18,6 @@ async function main() {
 
 main().catch(error => {
 	const message = error instanceof Error ? error.message : String(error);
-	console.error(`Git Insight failed: ${message}`);
+	console.error(`Git Insight 执行失败：${message}`);
 	process.exitCode = 1;
 });

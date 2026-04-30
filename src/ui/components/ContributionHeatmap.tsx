@@ -21,8 +21,8 @@ type YearRow = {
 	months: Array<HeatmapPeriodCount | undefined>;
 };
 
-const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const COLORS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
 const DAILY_WEEK_COLUMN_WIDTH = 2;
 
@@ -45,7 +45,7 @@ function DailyHeatmap({heatmap}: ContributionHeatmapProps) {
 			<Text color="gray">      {monthLabels}</Text>
 			{WEEKDAY_LABELS.map((label, rowIndex) => (
 				<Text key={label}>
-					<Text color="gray">{label}   </Text>
+					<Text color="gray">{label}  </Text>
 					{layout.map((column, weekIndex) => (
 						<React.Fragment key={`${label}-${weekIndex}`}>
 							{column.prefix && <Text>{column.prefix}</Text>}
@@ -64,7 +64,7 @@ function MonthlyHeatmap({heatmap}: ContributionHeatmapProps) {
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
 			<Legend />
-			<Text color="gray">Monthly view</Text>
+			<Text color="gray">按月视图</Text>
 			<Text color="gray">      {MONTH_LABELS.map(label => label.padEnd(4, ' ')).join('')}</Text>
 			{rows.map(row => (
 				<Text key={row.year}>
@@ -83,9 +83,9 @@ function MonthlyHeatmap({heatmap}: ContributionHeatmapProps) {
 function Legend() {
 	return (
 		<Text>
-			<Text color="gray">Less </Text>
+			<Text color="gray">少 </Text>
 			{COLORS.map(color => <Text key={color} color={color}>■ </Text>)}
-			<Text color="gray">More</Text>
+			<Text color="gray">多</Text>
 		</Text>
 	);
 }

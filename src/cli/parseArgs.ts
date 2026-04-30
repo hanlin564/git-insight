@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {Command} from 'commander';
+import {Command, Help, type Argument, type Option} from 'commander';
 import {addDays, formatDate, getDaysBetween, startOfLocalDay, type DateRange} from '../utils/date.js';
 
 const MAX_SINCE_DAYS = 3650;
@@ -48,7 +48,7 @@ const parseSinceRange = (value: string): DateRange => {
 		kind: 'since',
 		startDate: formatDate(start),
 		endDate: formatDate(end),
-		label: `last ${last} days`,
+		label: `最近 ${last} 天`,
 		dayCount: last
 	};
 };
@@ -209,7 +209,7 @@ function parseDateInput(value: string, optionName: string): DateInput {
 }
 
 function getCustomRangeLabel(request: Extract<RangeRequest, {kind: 'custom'}>): string {
-	return `${request.from?.raw ?? 'first commit'}..${request.to?.raw ?? 'now'}`;
+	return `${request.from?.raw ?? '首个提交'}..${request.to?.raw ?? '今天'}`;
 }
 
 export function parseArgs(argv = process.argv): CliOptions {
@@ -218,6 +218,16 @@ export function parseArgs(argv = process.argv): CliOptions {
 	program
 		.name('git-insight')
 		.description('一次性输出型 Git 仓库分析工具')
+		.configureHelp({
+			optionDescription: describeOption,
+			argumentDescription: describeArgument,
+			formatHelp: formatChineseHelp
+		})
+		.configureOutput({
+			outputError: (text, write) => {
+				write(translateCommanderError(text));
+			}
+		})
 		.helpOption('-h, --help', '显示帮助信息')
 		.option('--last <days>', '统计最近 N 天数据，默认 365，最大 3650')
 		.option('--year <yyyy>', '统计指定年份数据')
@@ -279,4 +289,88 @@ export function parseArgs(argv = process.argv): CliOptions {
 		ranking: values.ranking,
 		branchActivity: values.branchActivity
 	};
+}
+
+const defaultHelp = new Help();
+
+function describeOption(option: Option): string {
+	return translateHelpExtra(defaultHelp.optionDescription(option));
+}
+
+function describeArgument(argument: Argument): string {
+	return translateHelpExtra(defaultHelp.argumentDescription(argument));
+}
+
+function translateHelpExtra(value: string): string {
+	return value
+		.replace(/\bchoices: /g, '可选值：')
+		.replace(/\bdefault: /g, '默认：')
+		.replace(/\bpreset: /g, '预设：')
+		.replace(/\benv: /g, '环境变量：');
+}
+
+function translateCommanderError(value: string): string {
+	return value
+		.replace(/^error: unknown option '([^']+)'/m, '错误：未知选项 \'$1\'')
+		.replace(/^error: option '([^']+)' argument missing/m, '错误：选项 \'$1\' 缺少参数')
+		.replace(/^error: required option '([^']+)' not specified/m, '错误：必填选项 \'$1\' 未指定')
+		.replace(/^error: missing required argument '([^']+)'/m, '错误：缺少必填参数 \'$1\'')
+		.replace(/^error: too many arguments\. Expected (\d+) arguments? but got (\d+)\./m, '错误：参数过多。需要 $1 个，收到 $2 个。')
+		.replace(/\(Did you mean one of ([^)]+)\?\)/g, '（你是想输入这些选项之一吗：$1？）')
+		.replace(/\(Did you mean ([^)]+)\?\)/g, '（你是想输入 $1 吗？）');
+}
+
+function formatChineseHelp(command: Command, helper: Help): string {
+	const termWidth = helper.padWidth(command, helper);
+	const helpWidth = helper.helpWidth ?? 80;
+	const itemIndentWidth = 2;
+	const itemSeparatorWidth = 2;
+	const formatItem = (term: string, description: string): string => {
+		if (!description) {
+			return term;
+		}
+
+		const fullText = `${term.padEnd(termWidth + itemSeparatorWidth)}${description}`;
+		return helper.wrap(fullText, helpWidth - itemIndentWidth, termWidth + itemSeparatorWidth);
+	};
+	const formatList = (items: string[]): string => items.join('\n').replace(/^/gm, ' '.repeat(itemIndentWidth));
+
+	let output = [`用法：${helper.commandUsage(command)}`, ''];
+
+	const commandDescription = helper.commandDescription(command);
+	if (commandDescription.length > 0) {
+		output = output.concat([helper.wrap(commandDescription, helpWidth, 0), '']);
+	}
+
+	const argumentList = helper.visibleArguments(command).map(argument =>
+		formatItem(helper.argumentTerm(argument), helper.argumentDescription(argument))
+	);
+	if (argumentList.length > 0) {
+		output = output.concat(['参数：', formatList(argumentList), '']);
+	}
+
+	const optionList = helper.visibleOptions(command).map(option =>
+		formatItem(helper.optionTerm(option), helper.optionDescription(option))
+	);
+	if (optionList.length > 0) {
+		output = output.concat(['选项：', formatList(optionList), '']);
+	}
+
+	if (helper.showGlobalOptions) {
+		const globalOptionList = helper.visibleGlobalOptions(command).map(option =>
+			formatItem(helper.optionTerm(option), helper.optionDescription(option))
+		);
+		if (globalOptionList.length > 0) {
+			output = output.concat(['全局选项：', formatList(globalOptionList), '']);
+		}
+	}
+
+	const commandList = helper.visibleCommands(command).map(visibleCommand =>
+		formatItem(helper.subcommandTerm(visibleCommand), helper.subcommandDescription(visibleCommand))
+	);
+	if (commandList.length > 0) {
+		output = output.concat(['命令：', formatList(commandList), '']);
+	}
+
+	return output.join('\n');
 }

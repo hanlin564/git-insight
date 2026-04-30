@@ -80,7 +80,7 @@ export function getMondayFirstWeekday(dateText: string): number {
 }
 
 export function getMonthLabel(dateText: string): string {
-	return new Intl.DateTimeFormat('en', {month: 'short'}).format(new Date(`${dateText}T00:00:00`));
+	return `${Number.parseInt(dateText.slice(5, 7), 10)}月`;
 }
 
 export function getDaysBetween(startDate: string, endDate: string): number {
