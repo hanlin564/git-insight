@@ -43,9 +43,10 @@ export async function createRepositoryTarget(repoPath: string): Promise<Reposito
 
 export async function resolveAnalysisBranch(
 	repoPath: string,
-	branchName?: string
+	branchName?: string,
+	currentBranchName?: string
 ): Promise<{name: string; ref?: string}> {
-	const name = branchName ?? await getCurrentBranchName(repoPath);
+	const name = branchName ?? currentBranchName ?? await getCurrentBranchName(repoPath);
 	const ref = branchName ? await resolveBranchRef(repoPath, name) : await resolveCurrentBranchRef(repoPath, name);
 	return {name, ref};
 }
@@ -100,7 +101,7 @@ export async function getFirstCommitDate(repoPath: string, branchRef: string): P
 	}
 }
 
-async function getCurrentBranchName(repoPath: string): Promise<string> {
+export async function getCurrentBranchName(repoPath: string): Promise<string> {
 	const branchName = (await runGit(repoPath, ['branch', '--show-current'])).trim();
 	return branchName || 'HEAD';
 }

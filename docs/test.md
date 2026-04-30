@@ -33,13 +33,13 @@ npm run build
 
 | 测试案例 | 命令形态 | 场景 | 预期 |
 | --- | --- | --- | --- |
-| 按指定月份统计临时仓库提交，并输出排行榜 | `git-insight --repo <临时仓库> --month 2025-04 --no-heatmap` | 仓库包含 2025-03 的 Carol 提交，以及 2025-04 的 Alice、Bob 提交。 | 退出码为 `0`；输出仓库名、`Branch: main`、`Range: 2025-04`、提交数排行榜、Alice、Bob；不输出 Carol 和热力图标题。 |
+| 按指定月份统计临时仓库提交，并输出排行榜 | `git-insight --repo <临时仓库> --month 2025-04 --no-heatmap` | 仓库包含 2025-03 的 Carol 提交，以及 2025-04 的 Alice、Bob 提交。 | 退出码为 `0`；输出仓库名、`当前分支: main`、`分析分支: main`、`Range: 2025-04`、提交数排行榜、Alice、Bob；不输出 Carol 和热力图标题。 |
 | 支持 `--last` 统计最近 N 天提交 | `git-insight --repo <临时仓库> --last 7 --no-heatmap` | 仓库包含最近 7 天内的 Recent Author 提交，以及 10 天前的 Old Author 提交。 | 退出码为 `0`；输出 `Range: last 7 days` 和 Recent Author；不输出 Old Author。 |
 | 支持 `--year` 只统计指定年份提交 | `git-insight --repo <临时仓库> --year 2025 --no-heatmap` | 仓库包含 2024-12-31 和 2025-01-01 两个提交。 | 退出码为 `0`；输出 `Range: 2025` 和 Target Year；不输出 Last Year。 |
 | 支持单独使用 `--from` 统计到今天 | `git-insight --repo <临时仓库> --from <日期> --no-heatmap` | 仓库包含指定起始日期前后的提交。 | 退出码为 `0`；输出 `<日期>..now`；只输出范围内作者。 |
 | 支持单独使用 `--to` 从首个提交统计到指定日期 | `git-insight --repo <临时仓库> --to 2025-01-31 --no-heatmap` | 仓库首个提交在 2025-01-10，另有 2025-02-10 提交。 | 退出码为 `0`；输出 `first commit..2025-01-31` 和 First Author；不输出 After Author。 |
-| 支持 `--branch` 分析指定分支 | `git-insight --repo <临时仓库> --branch feature/report --from 2025-04-01 --to 2025-04-30 --no-heatmap` | 当前检出 `main`，指定分析 `feature/report`，该分支有 Branch User 提交。 | 退出码为 `0`；输出 `Branch: feature/report` 和 Branch User。 |
-| 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --no-heatmap` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `Branch: HEAD` 和 Detached User。 |
+| 支持 `--branch` 分析指定分支 | `git-insight --repo <临时仓库> --branch feature/report --from 2025-04-01 --to 2025-04-30 --no-heatmap` | 当前检出 `main`，指定分析 `feature/report`，该分支有 Branch User 提交。 | 退出码为 `0`；输出 `当前分支: main`、`分析分支: feature/report` 和 Branch User。 |
+| 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --no-heatmap` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `当前分支: HEAD`、`分析分支: HEAD` 和 Detached User。 |
 | 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com --no-heatmap` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `Author filter: bob@example.com` 和 Bob；不输出 Alice。 |
 | 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me --no-heatmap` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`你的排名`，并以 `你 Bob` 展示当前用户。 |
 | 使用 `--me` 但仓库没有 Git 用户配置时返回可读错误 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 临时仓库不配置本地 `user.name` 和 `user.email`，运行环境也隔离了 HOME。 | 退出码为 `1`；输出 `未读取到当前 Git 配置用户`。 |

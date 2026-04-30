@@ -20,7 +20,8 @@ test('按指定月份统计临时仓库提交，并输出排行榜', async t => 
 	assert.equal(result.exitCode, 0, result.output);
 	assert.match(result.output, /Git Insight/);
 	assert.match(result.output, new RegExp(`Repository:\\s+${escapeRegExp(repo.name)}`));
-	assert.match(result.output, /Branch:\s+main/);
+	assert.match(result.output, /当前分支:\s+main/);
+	assert.match(result.output, /分析分支:\s+main/);
 	assert.match(result.output, /Range:\s+2025-04/);
 	assert.match(result.output, /提交数排行榜/);
 	assert.match(result.output, /Alice/);
@@ -200,7 +201,8 @@ test('支持 --branch 分析指定分支，而不是当前分支', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /Branch:\s+feature\/report/);
+	assert.match(result.output, /当前分支:\s+main/);
+	assert.match(result.output, /分析分支:\s+feature\/report/);
 	assert.match(result.output, /Branch User/);
 });
 
@@ -228,7 +230,8 @@ test('支持 detached HEAD 状态下分析当前提交', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /Branch:\s+HEAD/);
+	assert.match(result.output, /当前分支:\s+HEAD/);
+	assert.match(result.output, /分析分支:\s+HEAD/);
 	assert.match(result.output, /Detached User/);
 });
 

@@ -2,6 +2,7 @@ import {createCustomDateRange, type CliOptions} from '../cli/parseArgs.js';
 import type {AuthorStat, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
 import {
 	createRepositoryTarget,
+	getCurrentBranchName,
 	getCurrentGitUser,
 	getFirstCommitDate,
 	getLogWithNumstat,
@@ -26,7 +27,8 @@ export type RepositoryStats = {
 	topByChangedLines: AuthorStat[];
 	heatmap?: ContributionHeatmapStat;
 	currentGitUser?: GitUserIdentity;
-	branchName: string;
+	currentBranchName: string;
+	analysisBranchName: string;
 	range: DateRange;
 };
 
@@ -37,7 +39,8 @@ export type RepositoryStatsResult =
 export async function collectRepositoryStats(options: CliOptions): Promise<RepositoryStatsResult> {
 	try {
 		const repository = await createRepositoryTarget(options.repo);
-		const branch = await resolveAnalysisBranch(repository.path, options.branch);
+		const currentBranchName = await getCurrentBranchName(repository.path);
+		const branch = await resolveAnalysisBranch(repository.path, options.branch, currentBranchName);
 		const range = await resolveDateRange(repository.path, branch.ref, options);
 		const logOutput = branch.ref ? await getLogWithNumstat(repository.path, range, branch.ref) : '';
 		const commits = parseGitLogWithNumstat(logOutput);
@@ -63,7 +66,8 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 					? collectContributionHeatmap(commits, range, authorResolver, options.author, currentGitUser)
 					: undefined,
 				currentGitUser,
-				branchName: branch.name,
+				currentBranchName,
+				analysisBranchName: branch.name,
 				range
 			}
 		};

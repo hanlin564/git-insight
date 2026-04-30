@@ -34,7 +34,8 @@ export function App({options, result}: AppProps) {
 		<Box flexDirection="column">
 			<Text color="green" bold>Git Insight</Text>
 			<Text>Repository: <Text color="cyan">{stats.repository.name}</Text></Text>
-			<Text>Branch: <Text color="cyan">{stats.branchName}</Text></Text>
+			<Text>当前分支: <Text color="cyan">{stats.currentBranchName}</Text></Text>
+			<Text>分析分支: <Text color="cyan">{stats.analysisBranchName}</Text></Text>
 			<Text>Range: {stats.range.label}</Text>
 			{options.author && <Text>Author filter: {options.author}</Text>}
 			{options.me && <Text>Current user: {formatGitUser(stats.currentGitUser)}</Text>}
