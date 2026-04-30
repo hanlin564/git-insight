@@ -60,8 +60,6 @@ npm run build
 --branch <name>        指定分析分支，默认当前分支
 --author <query>       只展示匹配作者名称或邮箱的数据
 --me                   只展示当前 Git 配置用户的数据
---no-heatmap           关闭提交热力图
---no-ranking           关闭作者排名
 ```
 
 `--last`、`--year`、`--month`、`--from/--to` 只能指定其中一种时间范围；如果都不指定，默认使用 `--last 365`。
@@ -123,12 +121,6 @@ npm run dev -- --repo /path/to/repo --author alice
 
 ```bash
 npm run dev -- --repo /path/to/repo --me
-```
-
-关闭热力图，只看作者排名：
-
-```bash
-npm run dev -- --repo /path/to/repo --no-heatmap
 ```
 
 ## 输出内容

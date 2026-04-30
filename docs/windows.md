@@ -81,7 +81,7 @@ npm test
 npm run build
 node dist/index.js --repo C:\path\to\repo --last 30
 git-insight --repo C:\path\to\repo --last 30
-git-insight --repo C:\path\to\repo --no-heatmap --no-ranking
+git-insight --repo C:\path\to\repo --from 2025-01-01 --to 2025-01-31
 ```
 
 建议覆盖以下仓库状态：

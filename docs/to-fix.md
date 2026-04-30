@@ -138,9 +138,9 @@ error: unknown option '--since'
 
 ```bash
 npm run build
-npm run dev -- --repo /tmp/git-insight-wide.C0Rgu0 --last 3650 --no-heatmap
-npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90 --no-heatmap
-npm start -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90 --no-heatmap
+npm run dev -- --repo /tmp/git-insight-wide.C0Rgu0 --last 3650
+npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90
+npm start -- --repo /Users/wanghanlin/MyCodes/workingCodes/Echo --last 90
 npm run dev -- --repo /Users/wanghanlin/MyCodes/workingCodes/Erp --since 3650 --top 10
 ```
 

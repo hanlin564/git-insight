@@ -13,8 +13,7 @@ test('按指定月份统计临时仓库提交，并输出排行榜', async t => 
 		'--repo',
 		repo.path,
 		'--month',
-		'2025-04',
-		'--no-heatmap'
+		'2025-04'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -27,7 +26,6 @@ test('按指定月份统计临时仓库提交，并输出排行榜', async t => 
 	assert.match(result.output, /Alice/);
 	assert.match(result.output, /Bob/);
 	assert.doesNotMatch(result.output, /Carol/);
-	assert.doesNotMatch(result.output, /仓库贡献热力图/);
 });
 
 test('支持 --last 统计最近 N 天提交', async t => {
@@ -56,8 +54,7 @@ test('支持 --last 统计最近 N 天提交', async t => {
 		'--repo',
 		repo.path,
 		'--last',
-		'7',
-		'--no-heatmap'
+		'7'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -89,8 +86,7 @@ test('支持 --year 只统计指定年份提交', async t => {
 		'--repo',
 		repo.path,
 		'--year',
-		'2025',
-		'--no-heatmap'
+		'2025'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -125,8 +121,7 @@ test('支持单独使用 --from 统计到今天', async t => {
 		'--repo',
 		repo.path,
 		'--from',
-		includedDate,
-		'--no-heatmap'
+		includedDate
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -158,8 +153,7 @@ test('支持单独使用 --to 从首个提交统计到指定日期', async t => 
 		'--repo',
 		repo.path,
 		'--to',
-		'2025-01-31',
-		'--no-heatmap'
+		'2025-01-31'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -196,8 +190,7 @@ test('支持 --branch 分析指定分支，而不是当前分支', async t => {
 		'--from',
 		'2025-04-01',
 		'--to',
-		'2025-04-30',
-		'--no-heatmap'
+		'2025-04-30'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -238,8 +231,7 @@ test('未指定 --branch 时展示活跃和不活跃分支', async t => {
 		'--repo',
 		repo.path,
 		'--last',
-		'3650',
-		'--no-heatmap'
+		'3650'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -247,25 +239,6 @@ test('未指定 --branch 时展示活跃和不活跃分支', async t => {
 	assert.match(result.output, new RegExp(`feature/active\\s+${escapeRegExp(recentDate)}`));
 	assert.match(result.output, /^不活跃分支$/m);
 	assert.match(result.output, new RegExp(`当前 feature/stale\\s+${escapeRegExp(staleDate)}`));
-});
-
-test('支持 --no-branch-activity 关闭活跃和不活跃分支', async t => {
-	const repo = await createRepositoryWithHistory(t);
-
-	const result = await runGitInsight(t, [
-		'--repo',
-		repo.path,
-		'--from',
-		'2025-04-01',
-		'--to',
-		'2025-04-30',
-		'--no-heatmap',
-		'--no-branch-activity'
-	]);
-
-	assert.equal(result.exitCode, 0, result.output);
-	assert.doesNotMatch(result.output, /^活跃分支$/m);
-	assert.doesNotMatch(result.output, /^不活跃分支$/m);
 });
 
 test('支持 detached HEAD 状态下分析当前提交', async t => {
@@ -287,8 +260,7 @@ test('支持 detached HEAD 状态下分析当前提交', async t => {
 		'--from',
 		'2025-04-01',
 		'--to',
-		'2025-04-30',
-		'--no-heatmap'
+		'2025-04-30'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -308,8 +280,7 @@ test('支持 --author 过滤作者数据', async t => {
 		'--to',
 		'2025-04-30',
 		'--author',
-		'bob@example.com',
-		'--no-heatmap'
+		'bob@example.com'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -329,8 +300,7 @@ test('支持 --me 使用临时仓库本地 Git 用户配置', async t => {
 		'2025-04-01',
 		'--to',
 		'2025-04-30',
-		'--me',
-		'--no-heatmap'
+		'--me'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
@@ -362,26 +332,6 @@ test('使用 --me 但仓库没有 Git 用户配置时返回可读错误', async 
 
 	assert.equal(result.exitCode, 1, result.output);
 	assert.match(result.output, /未读取到当前 Git 配置用户/);
-});
-
-test('支持 --no-heatmap 和 --no-ranking 只输出仓库摘要', async t => {
-	const repo = await createRepositoryWithHistory(t);
-
-	const result = await runGitInsight(t, [
-		'--repo',
-		repo.path,
-		'--from',
-		'2025-04-01',
-		'--to',
-		'2025-04-30',
-		'--no-heatmap',
-		'--no-ranking'
-	]);
-
-	assert.equal(result.exitCode, 0, result.output);
-	assert.match(result.output, /Git Insight/);
-	assert.doesNotMatch(result.output, /仓库贡献热力图/);
-	assert.doesNotMatch(result.output, /排行榜/);
 });
 
 test('空仓库会输出无提交数据提示', async t => {
@@ -442,6 +392,14 @@ test('未知参数会返回中文错误', async t => {
 	assert.doesNotMatch(result.output, /unknown option/);
 });
 
+test('移除的显示开关会返回未知参数错误', async t => {
+	const result = await runGitInsight(t, ['--no-heatmap']);
+
+	assert.equal(result.exitCode, 1, result.output);
+	assert.match(result.output, /错误：未知选项 '--no-heatmap'/);
+	assert.doesNotMatch(result.output, /unknown option/);
+});
+
 test('帮助命令输出关键参数说明', async t => {
 	const result = await runGitInsight(t, ['--help']);
 
@@ -474,8 +432,7 @@ test('临时仓库内的作者合并配置会参与命令统计', async t => {
 		'--to',
 		'2025-04-30',
 		'--author',
-		'team@example.com',
-		'--no-heatmap'
+		'team@example.com'
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);

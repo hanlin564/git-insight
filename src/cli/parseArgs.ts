@@ -21,9 +21,6 @@ export type CliOptions = {
 	branch?: string;
 	author?: string;
 	me: boolean;
-	heatmap: boolean;
-	ranking: boolean;
-	branchActivity: boolean;
 };
 
 const parsePositiveInteger = (value: string, optionName: string): number => {
@@ -238,9 +235,6 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--repo <path>', '指定 Git 仓库目录，默认当前目录', process.cwd())
 		.option('--author <query>', '只展示匹配作者名称或邮箱的数据')
 		.option('--me', '聚焦当前 Git 配置用户的数据和排名')
-		.option('--no-heatmap', '关闭提交热力图')
-		.option('--no-ranking', '关闭作者排名')
-		.option('--no-branch-activity', '关闭活跃/不活跃分支')
 		.addHelpText('after', `
 时间范围:
   默认使用 --last 365。
@@ -254,9 +248,8 @@ export function parseArgs(argv = process.argv): CliOptions {
   --author 会匹配作者名称、邮箱和配置合并后的展示名称/邮箱。
   --me 使用当前仓库 Git 配置中的 user.name / user.email；热力图展示本人，排行榜展示全仓库排名中的本人位置。
 
-显示开关:
+显示内容:
   默认显示提交热力图、作者排名和活跃/不活跃分支。
-  --no-heatmap 可关闭热力图，--no-ranking 可关闭作者排名，--no-branch-activity 可关闭活跃/不活跃分支。
   使用 --branch 指定单个分析分支时，不展示活跃/不活跃分支。
 
 示例:
@@ -270,7 +263,6 @@ export function parseArgs(argv = process.argv): CliOptions {
   git-insight --repo /path/to/repo --from 2025-04-01 --to 2025-04-20
   git-insight --repo /path/to/repo --branch main --author alice
   git-insight --repo /path/to/repo --me
-  git-insight --repo /path/to/repo --no-heatmap --no-ranking
 `);
 
 	program.parse(argv);
@@ -284,10 +276,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		rangeRequest: parseRangeRequest(values),
 		branch: values.branch,
 		author: values.author,
-		me: values.me,
-		heatmap: values.heatmap,
-		ranking: values.ranking,
-		branchActivity: values.branchActivity
+		me: values.me
 	};
 }
 

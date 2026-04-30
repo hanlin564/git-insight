@@ -55,7 +55,7 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 		}
 
 		const authorStats = collectAuthorStats(commits, authorResolver, range.dayCount, options.author, currentGitUser);
-		const branchGroups = options.branchActivity && !options.branch
+		const branchGroups = !options.branch
 			? await collectBranchGroups(repository.path, currentBranchName)
 			: undefined;
 
@@ -67,9 +67,7 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				authorStats,
 				topByCommits: topAuthorsByCommits(authorStats, DEFAULT_RANKING_LIMIT),
 				topByChangedLines: topAuthorsByChangedLines(authorStats, DEFAULT_RANKING_LIMIT),
-				heatmap: options.heatmap
-					? collectContributionHeatmap(commits, range, authorResolver, options.author, currentGitUser)
-					: undefined,
+				heatmap: collectContributionHeatmap(commits, range, authorResolver, options.author, currentGitUser),
 				branchGroups,
 				currentGitUser,
 				currentBranchName,

@@ -44,18 +44,18 @@ export function App({options, result}: AppProps) {
 
 			{!hasAuthorData && <Text color="yellow">当前统计范围内没有匹配的提交数据。</Text>}
 
-			{options.heatmap && stats.heatmap && (
+			{stats.heatmap && (
 				<Section title={heatmapTitle}>
 					<Text color="gray">{heatmapScope}</Text>
 					<ContributionHeatmap heatmap={stats.heatmap} />
 				</Section>
 			)}
 
-			{options.branchActivity && !options.branch && stats.branchGroups && (
+			{!options.branch && stats.branchGroups && (
 				<BranchActivity groups={stats.branchGroups} />
 			)}
 
-			{options.ranking && hasAuthorData && <AuthorRanking stats={stats} showCurrentUserContext={options.me} />}
+			{hasAuthorData && <AuthorRanking stats={stats} showCurrentUserContext={options.me} />}
 		</Box>
 	);
 }

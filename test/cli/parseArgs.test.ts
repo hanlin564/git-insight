@@ -4,13 +4,10 @@ import {createCustomDateRange, parseArgs} from '../../src/cli/parseArgs.js';
 
 const argv = (...args: string[]): string[] => ['node', 'git-insight', ...args];
 
-test('parseArgs 使用默认范围和显示开关', () => {
+test('parseArgs 使用默认范围', () => {
 	const options = parseArgs(argv());
 
 	assert.equal(options.rangeRequest.kind, 'fixed');
-	assert.equal(options.heatmap, true);
-	assert.equal(options.ranking, true);
-	assert.equal(options.branchActivity, true);
 	assert.equal(options.me, undefined);
 	assert.equal(options.rangeRequest.range.kind, 'since');
 	assert.equal(options.rangeRequest.range.label, '最近 365 天');
@@ -39,25 +36,19 @@ test('parseArgs 解析合法时间范围', () => {
 	assert.equal(custom.rangeRequest.to?.endDate, '2025-04-30');
 });
 
-test('parseArgs 解析仓库、作者、分支和显示关闭参数', () => {
+test('parseArgs 解析仓库、作者和分支参数', () => {
 	const options = parseArgs(argv(
 		'--repo',
 		'fixtures/repo',
 		'--branch',
 		'feature/report',
 		'--author',
-		'alice',
-		'--no-heatmap',
-		'--no-ranking',
-		'--no-branch-activity'
+		'alice'
 	));
 
 	assert.match(options.repo, /fixtures\/repo$/);
 	assert.equal(options.branch, 'feature/report');
 	assert.equal(options.author, 'alice');
-	assert.equal(options.heatmap, false);
-	assert.equal(options.ranking, false);
-	assert.equal(options.branchActivity, false);
 });
 
 test('parseArgs 拒绝非法日期和互斥参数', () => {
