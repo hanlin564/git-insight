@@ -6,7 +6,7 @@ import {execa} from 'execa';
 import type {TestContext} from 'node:test';
 
 const projectRoot = fileURLToPath(new URL('../..', import.meta.url));
-const cliEntry = path.join(projectRoot, 'src/index.tsx');
+const cliEntry = path.join(projectRoot, 'dist/index.js');
 
 export type CliRunResult = {
 	exitCode: number;
@@ -20,7 +20,7 @@ export async function runGitInsight(t: TestContext, args: string[]): Promise<Cli
 		await rm(homePath, {recursive: true, force: true});
 	});
 
-	const result = await execa(process.execPath, ['--import', 'tsx', cliEntry, ...args], {
+	const result = await execa(process.execPath, [cliEntry, ...args], {
 		cwd: projectRoot,
 		extendEnv: false,
 		reject: false,

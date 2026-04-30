@@ -1,4 +1,4 @@
-import {mkdtemp, mkdir, rm, writeFile} from 'node:fs/promises';
+import {appendFile, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {execa} from 'execa';
@@ -39,6 +39,9 @@ export async function createTempGitRepository(
 ): Promise<TempGitRepository> {
 	const repoPath = await mkdtemp(path.join(os.tmpdir(), 'git-insight-test-'));
 	const repoName = path.basename(repoPath);
+	const fastImportMarksPath = path.join(repoPath, '.git-insight-fast-import-marks');
+	const branchTips = new Map<string, string | undefined>([['main', undefined]]);
+	let currentBranchName = 'main';
 
 	t.after(async () => {
 		await rm(repoPath, {recursive: true, force: true});
@@ -49,12 +52,10 @@ export async function createTempGitRepository(
 		return result.stdout;
 	};
 
-	await git(['init']);
+	await git(['init', '--initial-branch=main']);
 	if (options.configureUser !== false) {
-		await git(['config', 'user.name', DEFAULT_AUTHOR_NAME]);
-		await git(['config', 'user.email', DEFAULT_AUTHOR_EMAIL]);
+		await appendGitUserConfig(repoPath, DEFAULT_AUTHOR_NAME, DEFAULT_AUTHOR_EMAIL);
 	}
-	await git(['branch', '-M', 'main']);
 
 	return {
 		path: repoPath,
@@ -70,53 +71,105 @@ export async function createTempGitRepository(
 		},
 		async commitFile(options: CommitOptions) {
 			const filePath = options.filePath ?? 'README.md';
-			const fullPath = path.join(repoPath, filePath);
-			await mkdir(path.dirname(fullPath), {recursive: true});
-			await writeFile(fullPath, options.content ?? `${options.message ?? 'change'}\n`, 'utf8');
-			await git(['add', filePath]);
-
-			const authorName = options.authorName ?? DEFAULT_AUTHOR_NAME;
-			const authorEmail = options.authorEmail ?? DEFAULT_AUTHOR_EMAIL;
-			const date = `${options.date}T12:00:00+08:00`;
-			await execa('git', ['commit', '-m', options.message ?? `提交 ${filePath}`], {
-				cwd: repoPath,
-				env: {
-					GIT_AUTHOR_NAME: authorName,
-					GIT_AUTHOR_EMAIL: authorEmail,
-					GIT_AUTHOR_DATE: date,
-					GIT_COMMITTER_NAME: authorName,
-					GIT_COMMITTER_EMAIL: authorEmail,
-					GIT_COMMITTER_DATE: date
-				}
+			await importCommit({
+				repoPath,
+				marksPath: fastImportMarksPath,
+				branchName: currentBranchName,
+				parentHash: branchTips.get(currentBranchName),
+				options,
+				fileCommand: [
+					`M 100644 inline ${filePath}`,
+					`data ${Buffer.byteLength(options.content ?? `${options.message ?? 'change'}\n`)}`,
+					options.content ?? `${options.message ?? 'change'}\n`
+				].join('\n')
 			});
+			branchTips.set(currentBranchName, await readFastImportMark(fastImportMarksPath));
 		},
 		async removeFile(options: Omit<CommitOptions, 'content'>) {
 			const filePath = options.filePath ?? 'README.md';
-			await git(['rm', filePath]);
-
-			const authorName = options.authorName ?? DEFAULT_AUTHOR_NAME;
-			const authorEmail = options.authorEmail ?? DEFAULT_AUTHOR_EMAIL;
-			const date = `${options.date}T12:00:00+08:00`;
-			await execa('git', ['commit', '-m', options.message ?? `删除 ${filePath}`], {
-				cwd: repoPath,
-				env: {
-					GIT_AUTHOR_NAME: authorName,
-					GIT_AUTHOR_EMAIL: authorEmail,
-					GIT_AUTHOR_DATE: date,
-					GIT_COMMITTER_NAME: authorName,
-					GIT_COMMITTER_EMAIL: authorEmail,
-					GIT_COMMITTER_DATE: date
-				}
+			await importCommit({
+				repoPath,
+				marksPath: fastImportMarksPath,
+				branchName: currentBranchName,
+				parentHash: branchTips.get(currentBranchName),
+				options,
+				fileCommand: `D ${filePath}`
 			});
+			branchTips.set(currentBranchName, await readFastImportMark(fastImportMarksPath));
 		},
 		async checkout(branchName: string) {
 			await git(['checkout', branchName]);
+			currentBranchName = branchName;
 		},
 		async createBranch(branchName: string) {
 			await git(['checkout', '-b', branchName]);
+			branchTips.set(branchName, branchTips.get(currentBranchName));
+			currentBranchName = branchName;
 		},
 		async writeAuthorAliases(content: string) {
 			await writeFile(path.join(repoPath, '.git-insight.json'), content, 'utf8');
 		}
 	};
+}
+
+type ImportCommitOptions = {
+	repoPath: string;
+	marksPath: string;
+	branchName: string;
+	parentHash?: string;
+	options: Omit<CommitOptions, 'content'>;
+	fileCommand: string;
+};
+
+async function importCommit({
+	repoPath,
+	marksPath,
+	branchName,
+	parentHash,
+	options,
+	fileCommand
+}: ImportCommitOptions): Promise<void> {
+	const filePath = options.filePath ?? 'README.md';
+	const authorName = options.authorName ?? DEFAULT_AUTHOR_NAME;
+	const authorEmail = options.authorEmail ?? DEFAULT_AUTHOR_EMAIL;
+	const message = options.message ?? `提交 ${filePath}`;
+	const parentCommand = parentHash ? `from ${parentHash}\n` : '';
+	const input = [
+		`commit refs/heads/${branchName}`,
+		'mark :1',
+		`author ${formatFastImportIdentity(authorName, authorEmail)} ${formatFastImportDate(options.date)}`,
+		`committer ${formatFastImportIdentity(authorName, authorEmail)} ${formatFastImportDate(options.date)}`,
+		`data ${Buffer.byteLength(message)}`,
+		message,
+		parentCommand + fileCommand
+	].join('\n') + '\n';
+
+	await execa('git', ['fast-import', '--quiet', `--export-marks=${marksPath}`], {
+		cwd: repoPath,
+		input
+	});
+}
+
+async function readFastImportMark(marksPath: string): Promise<string> {
+	const marks = await readFile(marksPath, 'utf8');
+	const [, hash] = marks.trim().split(/\s+/, 2);
+
+	if (!hash) {
+		throw new Error('未读取到 fast-import 提交标记。');
+	}
+
+	return hash;
+}
+
+async function appendGitUserConfig(repoPath: string, name: string, email: string): Promise<void> {
+	await appendFile(path.join(repoPath, '.git', 'config'), `\n[user]\n\tname = ${name}\n\temail = ${email}\n`, 'utf8');
+}
+
+function formatFastImportIdentity(name: string, email: string): string {
+	return `${name.replace(/[<>\r\n]/g, ' ')} <${email.replace(/[<>\s]/g, '')}>`;
+}
+
+function formatFastImportDate(date: string): string {
+	const timestamp = Math.floor(new Date(`${date}T12:00:00+08:00`).getTime() / 1000);
+	return `${timestamp} +0800`;
 }

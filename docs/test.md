@@ -6,7 +6,7 @@
 npm test
 ```
 
-测试使用 Node.js 内置 test runner，通过 `tsx` 直接执行 TypeScript 测试文件。当前入口定义在 `package.json`：
+测试入口会先编译 CLI 到 `dist/`，再使用 Node.js 内置 test runner 运行测试。TypeScript 测试文件仍通过 `tsx` 直接执行，CLI 端到端测试运行编译后的 `dist/index.js`，更接近实际安装后的运行方式。当前入口定义在 `package.json`：
 
 ```bash
 node test/run-tests.mjs
@@ -24,8 +24,8 @@ npm run build
 
 相关 helper：
 
-- `test/helpers/tempGitRepository.ts`：初始化临时仓库、创建提交、切换分支、删除文件、写入 `.git-insight.json`，并在测试结束后清理临时目录。
-- `test/helpers/cli.ts`：通过 `node --import tsx src/index.tsx` 运行 CLI，并为每次运行隔离临时 `HOME`、`XDG_CONFIG_HOME` 和 Git 全局/系统配置入口，避免本机配置或全局 `.git-insight.json` 污染测试。
+- `test/helpers/tempGitRepository.ts`：初始化临时仓库，通过 `git fast-import` 创建提交/删除文件历史，切换分支、写入 `.git-insight.json`，并在测试结束后清理临时目录。
+- `test/helpers/cli.ts`：通过 `node dist/index.js` 运行 CLI，并为每次运行隔离临时 `HOME`、`XDG_CONFIG_HOME` 和 Git 全局/系统配置入口，避免本机配置或全局 `.git-insight.json` 污染测试。
 
 ## CLI 端到端测试
 
