@@ -1,4 +1,4 @@
-import {mkdtemp, rm} from 'node:fs/promises';
+import {mkdtemp, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -13,12 +13,24 @@ export type CliRunResult = {
 	output: string;
 };
 
-export async function runGitInsight(t: TestContext, args: string[]): Promise<CliRunResult> {
+type RunGitInsightOptions = {
+	homeConfig?: string;
+};
+
+export async function runGitInsight(
+	t: TestContext,
+	args: string[],
+	options: RunGitInsightOptions = {}
+): Promise<CliRunResult> {
 	const homePath = await mkdtemp(path.join(os.tmpdir(), 'git-insight-home-'));
 	const xdgConfigHomePath = path.join(homePath, '.config');
 	t.after(async () => {
 		await rm(homePath, {recursive: true, force: true});
 	});
+
+	if (options.homeConfig !== undefined) {
+		await writeFile(path.join(homePath, '.git-insight.json'), options.homeConfig, 'utf8');
+	}
 
 	const result = await execa(process.execPath, [cliEntry, ...args], {
 		cwd: projectRoot,

@@ -1,4 +1,5 @@
 import {strict as assert} from 'node:assert';
+import path from 'node:path';
 import test from 'node:test';
 import {createCustomDateRange, parseArgs} from '../../src/cli/parseArgs.js';
 
@@ -47,7 +48,7 @@ test('parseArgs 解析仓库、作者和分支参数', () => {
 		'alice'
 	));
 
-	assert.match(options.repo, /fixtures\/repo$/);
+	assert.equal(options.repo, path.resolve('fixtures/repo'));
 	assert.equal(options.branch, 'feature/report');
 	assert.equal(options.author, 'alice');
 });

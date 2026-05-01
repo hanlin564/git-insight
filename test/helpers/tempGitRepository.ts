@@ -15,6 +15,7 @@ type CommitOptions = {
 
 type CreateTempGitRepositoryOptions = {
 	configureUser?: boolean;
+	namePrefix?: string;
 };
 
 export type TempGitRepository = {
@@ -38,7 +39,7 @@ export async function createTempGitRepository(
 	t: TestContext,
 	options: CreateTempGitRepositoryOptions = {}
 ): Promise<TempGitRepository> {
-	const repoPath = await mkdtemp(path.join(os.tmpdir(), 'git-insight-test-'));
+	const repoPath = await mkdtemp(path.join(os.tmpdir(), options.namePrefix ?? 'git-insight-test-'));
 	const repoName = path.basename(repoPath);
 	const fastImportMarksPath = path.join(repoPath, '.git-insight-fast-import-marks');
 	const branchTips = new Map<string, string | undefined>([['main', undefined]]);

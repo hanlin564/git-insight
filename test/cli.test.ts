@@ -162,6 +162,31 @@ test('支持单独使用 --to 从首个提交统计到指定日期', async t => 
 	assert.doesNotMatch(result.output, /After Author/);
 });
 
+test('支持中文路径和中文作者名仓库', async t => {
+	const repo = await createTempGitRepository(t, {namePrefix: 'git-insight-中文-'});
+	await repo.commitFile({
+		date: '2025-04-01',
+		message: '中文路径提交',
+		filePath: 'src/中文文件.txt',
+		content: '内容\n',
+		authorName: '中文作者',
+		authorEmail: 'zh@example.com'
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--from',
+		'2025-04-01',
+		'--to',
+		'2025-04-30'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, new RegExp(`Repository:\\s*${escapeRegExp(repo.name)}`));
+	assert.match(result.output, /中文作者/);
+});
+
 test('支持 --branch 分析指定分支，而不是当前分支', async t => {
 	const repo = await createTempGitRepository(t);
 	await repo.commitFile({
@@ -447,6 +472,25 @@ test('仓库配置 language 为 en 时输出英文界面', async t => {
 	assert.match(result.output, /Current branch:\s+main/);
 	assert.match(result.output, /Date range:\s*2025-04/);
 	assert.doesNotMatch(result.output, /仓库：/);
+});
+
+test('用户主目录配置 language 为 zh 时输出中文界面', async t => {
+	const repo = await createRepositoryWithHistory(t);
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--month',
+		'2025-04'
+	], {
+		homeConfig: JSON.stringify({language: 'zh'})
+	});
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, new RegExp(`仓库：\\s*${escapeRegExp(repo.name)}`));
+	assert.match(result.output, /当前分支:\s+main/);
+	assert.match(result.output, /提交数排行榜/);
+	assert.doesNotMatch(result.output, /Repository:/);
 });
 
 test('中文配置下帮助和未知参数输出中文', async t => {

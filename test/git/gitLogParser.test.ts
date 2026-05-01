@@ -46,6 +46,17 @@ test('parseGitLogWithNumstat 将二进制文件 numstat 计为 0', () => {
 	assert.equal(commits[0]?.deletions, 0);
 });
 
+test('parseGitLogWithNumstat 兼容 CRLF 换行输出', () => {
+	const commits = parseGitLogWithNumstat([
+		commitHeader('abc123', 'Alice', 'alice@example.com', '2025-04-01'),
+		'1\t0\tsrc/a.ts'
+	].join('\r\n'));
+
+	assert.equal(commits[0]?.date, '2025-04-01');
+	assert.equal(commits[0]?.additions, 1);
+	assert.equal(commits[0]?.deletions, 0);
+});
+
 test('parseGitLogWithNumstat 忽略空输出和异常 header', () => {
 	assert.deepEqual(parseGitLogWithNumstat(''), []);
 	assert.deepEqual(parseGitLogWithNumstat(`__COMMIT__missing${separator}fields`), []);

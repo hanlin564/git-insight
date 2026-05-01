@@ -13,7 +13,7 @@ const parseNumstatValue = (value: string): number => {
 };
 
 const parseCommitHeader = (line: string): MutableCommit | undefined => {
-	const raw = line.replace('__COMMIT__', '');
+	const raw = line.replace('__COMMIT__', '').trimEnd();
 	const [hash, authorName, authorEmail, date] = raw.split(commitFieldSeparator);
 
 	if (!hash || !authorName || !date) {

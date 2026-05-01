@@ -38,6 +38,7 @@ npm run build
 | 支持 `--year` 只统计指定年份提交 | `git-insight --repo <临时仓库> --year 2025` | 仓库包含 2024-12-31 和 2025-01-01 两个提交。 | 退出码为 `0`；输出 `Date range: 2025` 和 Target Year；不输出 Last Year。 |
 | 支持单独使用 `--from` 统计到 today | `git-insight --repo <临时仓库> --from <日期>` | 仓库包含指定起始日期前后的提交。 | 退出码为 `0`；输出 `<日期>..today`；只输出范围内作者。 |
 | 支持单独使用 `--to` 从 first commit 统计到指定日期 | `git-insight --repo <临时仓库> --to 2025-01-31` | 仓库首个提交在 2025-01-10，另有 2025-02-10 提交。 | 退出码为 `0`；输出 `first commit..2025-01-31` 和 First Author；不输出 After Author。 |
+| 支持中文路径和中文作者名仓库 | `git-insight --repo <中文路径临时仓库> --from 2025-04-01 --to 2025-04-30` | 临时仓库路径包含中文，提交作者名和文件路径也包含中文。 | 退出码为 `0`；输出仓库名和中文作者名。 |
 | 支持 `--branch` 分析指定分支 | `git-insight --repo <临时仓库> --branch feature/report --from 2025-04-01 --to 2025-04-30` | 当前检出 `main`，指定分析 `feature/report`，该分支有 Branch User 提交。 | 退出码为 `0`；输出 `Current branch: main`、`Analysis branch: feature/report` 和 Branch User；不输出 Active/Stale Branches。 |
 | 未指定 `--branch` 时展示活跃和不活跃分支 | `git-insight --repo <临时仓库> --last 3650` | 仓库包含默认分支、最近 90 天内提交的 `feature/active`，以及超过 90 天未提交的 `feature/stale`。 | 退出码为 `0`；输出 `Active Branches`、`feature/active`、`Stale Branches` 和 `current feature/stale`。 |
 | 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `Current branch: HEAD`、`Analysis branch: HEAD` 和 Detached User。 |
@@ -53,6 +54,7 @@ npm run build
 | 帮助命令输出关键参数说明 | `git-insight --help` | 请求 CLI 帮助。 | 退出码为 `0`；输出 `Usage:`、`Options:`、`--repo <path>`、`--from <date>`、`--me`。 |
 | 仓库配置 `language: "zh"` 时输出中文界面 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 退出码为 `0`；输出仓库名、`当前分支: main`、`分析分支: main`、`统计范围：2025-04`、提交数排行榜；不输出 `Repository:`。 |
 | 仓库配置 `language: "en"` 时输出英文界面 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库内 `.git-insight.json` 设置 `{ "language": "en" }`。 | 退出码为 `0`；输出 `Repository:`、`Current branch:`、`Date range:`；不输出 `仓库：`。 |
+| 用户主目录配置 `language: "zh"` 时输出中文界面 | `git-insight --repo <临时仓库> --month 2025-04` | 隔离的临时用户主目录中 `.git-insight.json` 设置 `{ "language": "zh" }`，仓库内无配置。 | 退出码为 `0`；输出中文仓库信息和提交数排行榜；不输出 `Repository:`。 |
 | 中文配置下帮助和未知参数输出中文 | `git-insight --repo <临时仓库> --help`、`git-insight --repo <临时仓库> --since` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 帮助输出 `用法：`、`选项：`；未知参数输出 `错误：未知选项 '--since'`。 |
 | 非法 `language` 配置会返回可读错误 | `git-insight --repo <临时仓库> --help` | 仓库内 `.git-insight.json` 设置 `{ "language": "ja" }`。 | 退出码为 `1`；输出 `Git Insight config language must be "en" or "zh"`。 |
 | 临时仓库内的作者合并配置会参与命令统计 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author team@example.com` | 仓库内 `.git-insight.json` 将 Alice 合并展示为 `Alice Team <team@example.com>`。 | 退出码为 `0`；输出 Alice Team；不输出 Bob。 |
@@ -77,6 +79,7 @@ npm run build
 | --- | --- | --- | --- |
 | 解析多提交和多文件改动 | `parseGitLogWithNumstat` | 构造包含两个 commit、多条 numstat 的 Git log 文本。 | 正确解析 hash、作者、日期、additions、deletions。 |
 | 将二进制文件 numstat 计为 0 | `parseGitLogWithNumstat` | numstat 中 additions/deletions 为 `-`。 | additions 和 deletions 都为 `0`。 |
+| 兼容 CRLF 换行输出 | `parseGitLogWithNumstat` | 构造使用 Windows CRLF 换行的 Git log 文本。 | 日期字段不带 `\r`，numstat 仍能正确累加。 |
 | 忽略空输出和异常 header | `parseGitLogWithNumstat` | 输入空字符串或字段不完整的 commit header。 | 返回空数组，不产生脏数据。 |
 | 读取真实仓库中的新增、修改和删除行统计 | `getLogWithNumstat` + `parseGitLogWithNumstat` | 临时仓库依次新增文件、减少内容、删除文件。 | 解析出 3 个提交，总新增行数为 3，总删除行数为 3。 |
 
