@@ -46,6 +46,10 @@ npm run build
 | 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`Your rank`，并以 `you Bob` 展示当前用户。 |
 | 使用 `--me` 但仓库没有 Git 用户配置时返回可读错误 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 临时仓库不配置本地 `user.name` 和 `user.email`，运行环境也隔离了 HOME。 | 退出码为 `1`；输出 `Could not read the current Git configured user`。 |
 | 空仓库会输出无提交数据提示 | `git-insight --repo <空临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库已 `git init`，但没有任何提交。 | 退出码为 `0`；输出 `No matching commit data in the current date range`；不输出 Ranking。 |
+| 支持 `--html` 按指定路径生成英文报告 | `git-insight --repo <临时仓库> --month 2025-04 --html --path <report.html>` | 仓库包含 2025-04 的 Alice、Bob 提交，报告路径位于独立临时目录。 | 退出码为 `0`；输出生成路径；报告文件包含 `<html lang="en">`、英文标题、仓库名、作者排行榜、Alice、Bob 和热力图容器。 |
+| 支持 `--html` 不指定 `--path` 时生成到仓库根目录 | `git-insight --repo <临时仓库> --month 2025-04 --html` | 仓库包含提交，未显式指定报告文件路径。 | 退出码为 `0`；生成 `<仓库根目录>/git-insight-report.html`；文件包含英文标题和 Date Range。 |
+| 仓库配置 `language: "zh"` 时 `--html` 生成中文报告 | `git-insight --repo <临时仓库> --month 2025-04 --html --path <中文报告.html>` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 退出码为 `0`；输出中文生成提示；报告包含 `<html lang="zh-CN">`、中文标题、作者排行榜和提交数排行榜；不输出英文 `Repository`。 |
+| `--html` 分析非 Git 目录时不生成报告 | `git-insight --repo <临时非 Git 目录> --html --path <report.html>` | 创建普通临时目录，不执行 `git init`，同时指定报告路径。 | 退出码为 `1`；输出 `Not a Git repository`；报告文件不存在。 |
 | 非 Git 目录会返回可读错误 | `git-insight --repo <临时非 Git 目录>` | 创建普通临时目录，不执行 `git init`。 | 退出码为 `1`；输出 `Not a Git repository`。 |
 | 不存在的分支会返回可读错误 | `git-insight --repo <临时仓库> --branch missing-branch` | 仓库存在提交，但指定分支不存在。 | 退出码为 `1`；输出 `Branch not found: missing-branch`。 |
 | 参数组合非法时返回可读错误 | `git-insight --last 7 --month 2025-04` | 同时指定互斥的固定时间范围。 | 退出码为 `1`；输出 `Specify only one of --last, --year, and --month`。 |
@@ -68,6 +72,7 @@ npm run build
 | `parseArgs` 使用默认范围 | `parseArgs([])` | 不传任何参数。 | 默认语言为 `en`，默认范围为 `Last 365 days`。 |
 | `parseArgs` 解析合法时间范围 | `parseArgs` | 分别传入 `--last 7`、`--year 2025`、`--month 2025-04`、`--from 2025-04-01 --to 2025-04-30`。 | 正确生成固定或自定义时间范围，开始/结束日期符合预期。 |
 | `parseArgs` 解析仓库、作者和分支参数 | `parseArgs` | 传入 `--repo`、`--branch`、`--author`。 | 仓库路径被解析为绝对路径；分支和作者值正确。 |
+| `parseArgs` 解析 HTML 输出参数 | `parseArgs` | 传入 `--html --path report.html`。 | `html` 为 `true`；输出路径被解析为绝对路径。 |
 | `parseArgs` 拒绝非法日期和互斥参数 | `parseArgs` | 传入非法 `--last`、非法月份、不存在日期、互斥时间参数、`--author` 与 `--me` 同用。 | 默认抛出对应英文错误。 |
 | `createCustomDateRange` 处理自定义范围边界 | `createCustomDateRange` | 构造合法日期范围和 `from > to` 的非法范围。 | 合法范围 dayCount 正确；非法范围抛出 `--from cannot be later than --to`。 |
 

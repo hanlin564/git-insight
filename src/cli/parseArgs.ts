@@ -23,6 +23,8 @@ export type CliOptions = {
 	branch?: string;
 	author?: string;
 	me: boolean;
+	html: boolean;
+	outputPath?: string;
 	language: SupportedLanguage;
 };
 
@@ -249,6 +251,8 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--repo <path>', t.cli.options.repo, process.cwd())
 		.option('--author <query>', t.cli.options.author)
 		.option('--me', t.cli.options.me)
+		.option('--html', t.cli.options.html)
+		.option('--path <file>', t.cli.options.path)
 		.addHelpText('after', t.cli.helpText(MAX_SINCE_DAYS));
 
 	program.parse(argv);
@@ -262,7 +266,9 @@ export function parseArgs(argv = process.argv): CliOptions {
 		rangeRequest: parseRangeRequest(values, language),
 		branch: values.branch,
 		author: values.author,
-		me: values.me,
+		me: values.me === true,
+		html: values.html === true,
+		outputPath: values.path === undefined ? undefined : path.resolve(String(values.path)),
 		language
 	};
 }

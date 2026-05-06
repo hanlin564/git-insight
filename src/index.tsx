@@ -5,6 +5,7 @@ import {getConfiguredLanguageFromArgv, parseArgs} from './cli/parseArgs.js';
 import {collectRepositoryStats} from './analysis/collectRepositoryStats.js';
 import {App} from './ui/App.js';
 import {DEFAULT_LANGUAGE, getMessages, type SupportedLanguage} from './i18n.js';
+import {writeHtmlReport} from './html/generateHtmlReport.js';
 
 async function main() {
 	let language: SupportedLanguage = DEFAULT_LANGUAGE;
@@ -17,6 +18,21 @@ async function main() {
 
 		if (!result.ok) {
 			process.exitCode = 1;
+			if (options.html) {
+				const t = getMessages(language);
+				console.error(result.error);
+				console.error(t.ui.checkInputHint);
+				return;
+			}
+		}
+
+		if (options.html) {
+			if (result.ok) {
+				const outputPath = await writeHtmlReport({options, stats: result.stats});
+				console.log(getMessages(language).html.wroteReport(outputPath));
+			}
+
+			return;
 		}
 
 		render(<App options={options} result={result} />);

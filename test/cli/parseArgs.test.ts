@@ -9,7 +9,8 @@ test('parseArgs 使用默认范围', () => {
 	const options = parseArgs(argv());
 
 	assert.equal(options.rangeRequest.kind, 'fixed');
-	assert.equal(options.me, undefined);
+	assert.equal(options.me, false);
+	assert.equal(options.html, false);
 	assert.equal(options.language, 'en');
 	assert.equal(options.rangeRequest.range.kind, 'since');
 	assert.equal(options.rangeRequest.range.label, 'Last 365 days');
@@ -51,6 +52,13 @@ test('parseArgs 解析仓库、作者和分支参数', () => {
 	assert.equal(options.repo, path.resolve('fixtures/repo'));
 	assert.equal(options.branch, 'feature/report');
 	assert.equal(options.author, 'alice');
+});
+
+test('parseArgs 解析 HTML 输出参数', () => {
+	const options = parseArgs(argv('--html', '--path', 'report.html'));
+
+	assert.equal(options.html, true);
+	assert.equal(options.outputPath, path.resolve('report.html'));
 });
 
 test('parseArgs 拒绝非法日期和互斥参数', () => {

@@ -1,7 +1,7 @@
 import {strict as assert} from 'node:assert';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-import {mkdtemp, rm} from 'node:fs/promises';
+import {mkdtemp, readFile, realpath, rm} from 'node:fs/promises';
 import test, {type TestContext} from 'node:test';
 import {createTempGitRepository, type TempGitRepository} from './helpers/tempGitRepository.js';
 import {runGitInsight} from './helpers/cli.js';
@@ -374,6 +374,110 @@ test('空仓库会输出无提交数据提示', async t => {
 	assert.equal(result.exitCode, 0, result.output);
 	assert.match(result.output, /No matching commit data in the current date range/);
 	assert.doesNotMatch(result.output, /Ranking/);
+});
+
+test('支持 --html 按指定路径生成英文报告', async t => {
+	const repo = await createRepositoryWithHistory(t);
+	const outputDir = await mkdtemp(path.join(tmpdir(), 'git-insight-html-'));
+	const outputPath = path.join(outputDir, 'report.html');
+	t.after(async () => {
+		await rm(outputDir, {recursive: true, force: true});
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--month',
+		'2025-04',
+		'--html',
+		'--path',
+		outputPath
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, new RegExp(`HTML report written to ${escapeRegExp(outputPath)}`));
+
+	const html = await readFile(outputPath, 'utf8');
+	assert.match(html, /<html lang="en">/);
+	assert.match(html, /Git Repository Analysis Report/);
+	assert.match(html, new RegExp(escapeRegExp(repo.name)));
+	assert.match(html, /Author Rankings/);
+	assert.match(html, /Commit Count Ranking/);
+	assert.match(html, /Alice/);
+	assert.match(html, /Bob/);
+	assert.match(html, /heatmap-months/);
+});
+
+test('支持 --html 不指定 --path 时生成到仓库根目录', async t => {
+	const repo = await createRepositoryWithHistory(t);
+	const outputPath = path.join(await realpath(repo.path), 'git-insight-report.html');
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--month',
+		'2025-04',
+		'--html'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, new RegExp(`HTML report written to ${escapeRegExp(outputPath)}`));
+
+	const html = await readFile(outputPath, 'utf8');
+	assert.match(html, /Git Repository Analysis Report/);
+	assert.match(html, /Date Range/);
+});
+
+test('仓库配置 language 为 zh 时 --html 生成中文报告', async t => {
+	const repo = await createRepositoryWithHistory(t);
+	await repo.writeConfig(JSON.stringify({language: 'zh'}));
+	const outputDir = await mkdtemp(path.join(tmpdir(), 'git-insight-html-zh-'));
+	const outputPath = path.join(outputDir, '中文报告.html');
+	t.after(async () => {
+		await rm(outputDir, {recursive: true, force: true});
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--month',
+		'2025-04',
+		'--html',
+		'--path',
+		outputPath
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, new RegExp(`HTML 报告已生成：${escapeRegExp(outputPath)}`));
+
+	const html = await readFile(outputPath, 'utf8');
+	assert.match(html, /<html lang="zh-CN">/);
+	assert.match(html, /Git 仓库分析报告/);
+	assert.match(html, /作者排行榜/);
+	assert.match(html, /提交数排行榜/);
+	assert.doesNotMatch(html, /Repository/);
+});
+
+test('--html 分析非 Git 目录时不生成报告', async t => {
+	const dirPath = await mkdtemp(path.join(tmpdir(), 'git-insight-not-repo-'));
+	const outputDir = await mkdtemp(path.join(tmpdir(), 'git-insight-html-error-'));
+	const outputPath = path.join(outputDir, 'report.html');
+	t.after(async () => {
+		await rm(dirPath, {recursive: true, force: true});
+		await rm(outputDir, {recursive: true, force: true});
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		dirPath,
+		'--html',
+		'--path',
+		outputPath
+	]);
+
+	assert.equal(result.exitCode, 1, result.output);
+	assert.match(result.output, /Not a Git repository/);
+	await assert.rejects(() => readFile(outputPath, 'utf8'), /ENOENT/);
 });
 
 test('非 Git 目录会返回可读错误', async t => {
