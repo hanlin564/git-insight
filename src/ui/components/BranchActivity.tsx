@@ -15,8 +15,13 @@ export function BranchActivity({groups, language}: BranchActivityProps) {
 
 	return (
 		<Box flexDirection="column">
+			<Section title={t.defaultBranchTitle}>
+				<Text color="gray">{t.defaultBranchDescription}</Text>
+				<BranchList branches={groups.defaultBranch ? [groups.defaultBranch] : []} emptyText={t.noDefaultBranch} language={language} showIndex={false} />
+			</Section>
+
 			<Section title={t.activeBranchesTitle}>
-				<Text color="gray">{t.activeBranchesDescription(groups.defaultBranchName ?? t.unknownDefaultBranch)}</Text>
+				<Text color="gray">{t.activeBranchesDescription}</Text>
 				<BranchList branches={groups.active} emptyText={t.noActiveBranches} language={language} />
 			</Section>
 
@@ -28,7 +33,17 @@ export function BranchActivity({groups, language}: BranchActivityProps) {
 	);
 }
 
-function BranchList({branches, emptyText, language}: {branches: BranchSummary[]; emptyText: string; language: SupportedLanguage}) {
+function BranchList({
+	branches,
+	emptyText,
+	language,
+	showIndex = true
+}: {
+	branches: BranchSummary[];
+	emptyText: string;
+	language: SupportedLanguage;
+	showIndex?: boolean;
+}) {
 	if (branches.length === 0) {
 		return <Text color="gray">{emptyText}</Text>;
 	}
@@ -39,7 +54,7 @@ function BranchList({branches, emptyText, language}: {branches: BranchSummary[];
 		<Box flexDirection="column">
 			{branches.map((branch, index) => (
 				<Text key={branch.branchName} color={branch.isCurrentBranch ? 'cyan' : undefined} bold={branch.isCurrentBranch}>
-					#{index + 1} {padEndSafe(getBranchLabel(branch, language), nameWidth)}  {branch.latestCommitDate ?? '-'}
+					{showIndex ? `#${index + 1} ` : ''}{padEndSafe(getBranchLabel(branch, language), nameWidth)}  {branch.latestCommitDate ?? '-'}
 				</Text>
 			))}
 		</Box>

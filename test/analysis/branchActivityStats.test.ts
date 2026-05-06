@@ -41,6 +41,11 @@ test('collectBranchGroups 按最近 90 天将本地分支分为活跃和不活�
 	const groups = await collectBranchGroups(repo.path, 'feature/current', TODAY);
 
 	assert.equal(groups.defaultBranchName, 'main');
+	assert.deepEqual(groups.defaultBranch, {
+		branchName: 'main',
+		latestCommitDate: '2026-04-01',
+		isCurrentBranch: false
+	});
 	assert.equal(groups.staleThresholdDate, '2026-01-30');
 	assert.deepEqual(groups.active.map(branch => [branch.branchName, branch.latestCommitDate]), [
 		['feature/recent', '2026-04-20'],
@@ -82,4 +87,25 @@ test('collectBranchGroups 排除默认分支且不活跃分支按最旧提交排
 	assert.deepEqual(groups.stale.map(branch => branch.branchName), ['feature/older', 'feature/old']);
 	assert.equal(groups.stale.some(branch => branch.branchName === 'main'), false);
 	assert.equal(groups.stale[1]?.isCurrentBranch, true);
+});
+
+test('collectBranchGroups 只有默认分支时单独返回默认分支', async t => {
+	const repo = await createTempGitRepository(t);
+	await repo.commitFile({
+		date: '2026-04-01',
+		message: 'main 提交',
+		filePath: 'main.txt',
+		content: 'main\n'
+	});
+
+	const groups = await collectBranchGroups(repo.path, 'main', TODAY);
+
+	assert.equal(groups.defaultBranchName, 'main');
+	assert.deepEqual(groups.defaultBranch, {
+		branchName: 'main',
+		latestCommitDate: '2026-04-01',
+		isCurrentBranch: true
+	});
+	assert.deepEqual(groups.active, []);
+	assert.deepEqual(groups.stale, []);
 });

@@ -65,11 +65,14 @@ type UiMessages = {
 	currentUserHeatmapTitle: string;
 	repositoryHeatmapScope: string;
 	currentUserHeatmapScope: (user: string) => string;
+	defaultBranchTitle: string;
+	defaultBranchDescription: string;
 	activeBranchesTitle: string;
 	staleBranchesTitle: string;
-	activeBranchesDescription: (defaultBranchName: string) => string;
+	activeBranchesDescription: string;
 	staleBranchesDescription: (date: string) => string;
 	unknownDefaultBranch: string;
+	noDefaultBranch: string;
 	noActiveBranches: string;
 	noStaleBranches: string;
 	currentBranchPrefix: string;
@@ -131,6 +134,7 @@ type HtmlMessages = {
 	currentUserRankingHighlighted: string;
 	branchActivityTitle: string;
 	branchActivityNote: string;
+	defaultBranchDescription: string;
 	activeBranchesDescription: string;
 	staleBranchesDescription: string;
 	emptyHeatmap: string;
@@ -241,11 +245,14 @@ Examples:
 			currentUserHeatmapTitle: 'Current Git User Contribution Heatmap',
 			repositoryHeatmapScope: 'Scope: all matching authors in the repository',
 			currentUserHeatmapScope: user => `Scope: current Git user ${user}`,
+			defaultBranchTitle: 'Default Branch',
+			defaultBranchDescription: 'Primary branch shown separately from active and stale branches.',
 			activeBranchesTitle: 'Active Branches',
 			staleBranchesTitle: 'Stale Branches',
-			activeBranchesDescription: defaultBranchName => `Committed in the last 90 days. Default branch ${defaultBranchName} is hidden.`,
+			activeBranchesDescription: 'Committed in the last 90 days. Excludes the default branch.',
 			staleBranchesDescription: date => `No commits in the last 90 days. Threshold date: ${date}`,
 			unknownDefaultBranch: 'unknown',
+			noDefaultBranch: 'No default branch found',
 			noActiveBranches: 'No active branches',
 			noStaleBranches: 'No stale branches',
 			currentBranchPrefix: 'current',
@@ -302,7 +309,8 @@ Examples:
 			rankingsTitle: 'Author Rankings',
 			currentUserRankingHighlighted: 'Current user ranking is highlighted',
 			branchActivityTitle: 'Branch Activity',
-			branchActivityNote: 'Excludes main/master branches',
+			branchActivityNote: 'Default branch is shown separately. Active and stale lists include other local branches.',
+			defaultBranchDescription: 'Primary branch.',
 			activeBranchesDescription: 'Committed in the last 90 days.',
 			staleBranchesDescription: 'No commits in the last 90 days.',
 			emptyHeatmap: 'No matching commit data for the heatmap.',
@@ -410,11 +418,14 @@ Examples:
 			currentUserHeatmapTitle: '当前 Git 用户贡献热力图',
 			repositoryHeatmapScope: '统计口径：仓库内所有匹配作者',
 			currentUserHeatmapScope: user => `统计口径：当前 Git 用户 ${user}`,
+			defaultBranchTitle: '默认分支',
+			defaultBranchDescription: '主分支单独展示，不参与活跃/不活跃分支列表',
 			activeBranchesTitle: '活跃分支',
 			staleBranchesTitle: '不活跃分支',
-			activeBranchesDescription: defaultBranchName => `最近 90 天有提交，默认分支 ${defaultBranchName} 不参与展示`,
+			activeBranchesDescription: '最近 90 天有提交，不包含默认分支',
 			staleBranchesDescription: date => `最近 90 天无提交，阈值日期：${date}`,
 			unknownDefaultBranch: '未识别',
+			noDefaultBranch: '未识别到默认分支',
 			noActiveBranches: '当前没有活跃分支',
 			noStaleBranches: '当前没有不活跃分支',
 			currentBranchPrefix: '当前',
@@ -471,7 +482,8 @@ Examples:
 			rankingsTitle: '作者排行榜',
 			currentUserRankingHighlighted: '当前用户排名已高亮',
 			branchActivityTitle: '分支活跃度',
-			branchActivityNote: '不包含 main/master 分支',
+			branchActivityNote: '默认分支单独展示，活跃/不活跃列表统计其他本地分支。',
+			defaultBranchDescription: '主分支。',
 			activeBranchesDescription: '最近 90 天有提交。',
 			staleBranchesDescription: '最近 90 天无提交。',
 			emptyHeatmap: '热力图没有匹配的提交数据。',

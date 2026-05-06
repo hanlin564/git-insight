@@ -40,7 +40,8 @@ npm run build
 | 支持单独使用 `--to` 从 first commit 统计到指定日期 | `git-insight --repo <临时仓库> --to 2025-01-31` | 仓库首个提交在 2025-01-10，另有 2025-02-10 提交。 | 退出码为 `0`；输出 `first commit..2025-01-31` 和 First Author；不输出 After Author。 |
 | 支持中文路径和中文作者名仓库 | `git-insight --repo <中文路径临时仓库> --from 2025-04-01 --to 2025-04-30` | 临时仓库路径包含中文，提交作者名和文件路径也包含中文。 | 退出码为 `0`；输出仓库名和中文作者名。 |
 | 支持 `--branch` 分析指定分支 | `git-insight --repo <临时仓库> --branch feature/report --from 2025-04-01 --to 2025-04-30` | 当前检出 `main`，指定分析 `feature/report`，该分支有 Branch User 提交。 | 退出码为 `0`；输出 `Current branch: main`、`Analysis branch: feature/report` 和 Branch User；不输出 Active/Stale Branches。 |
-| 未指定 `--branch` 时展示活跃和不活跃分支 | `git-insight --repo <临时仓库> --last 3650` | 仓库包含默认分支、最近 90 天内提交的 `feature/active`，以及超过 90 天未提交的 `feature/stale`。 | 退出码为 `0`；输出 `Active Branches`、`feature/active`、`Stale Branches` 和 `current feature/stale`。 |
+| 未指定 `--branch` 时展示默认、活跃和不活跃分支 | `git-insight --repo <临时仓库> --last 3650` | 仓库包含默认分支、最近 90 天内提交的 `feature/active`，以及超过 90 天未提交的 `feature/stale`。 | 退出码为 `0`；输出 `Default Branch`、`main`、`Active Branches`、`feature/active`、`Stale Branches` 和 `current feature/stale`。 |
+| 只有默认分支时仍展示默认分支 | `git-insight --repo <临时仓库> --last 3650` | 仓库只包含最近提交的 `main` 分支。 | 退出码为 `0`；输出 `Default Branch`、`current main`、`No active branches` 和 `No stale branches`。 |
 | 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `Current branch: HEAD`、`Analysis branch: HEAD` 和 Detached User。 |
 | 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `Author filter: bob@example.com` 和 Bob；不输出 Alice。 |
 | 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`Your rank`，并以 `you Bob` 展示当前用户。 |
@@ -111,6 +112,7 @@ npm run build
 | --- | --- | --- | --- |
 | 按最近 90 天将本地分支分为活跃和不活跃 | `collectBranchGroups` | 临时仓库包含默认分支、近期提交分支、当前分支和超过 90 天未提交分支。 | 默认分支被排除；近期分支进入 active；旧分支进入 stale；当前分支标记正确。 |
 | 排除默认分支且不活跃分支按最旧提交排序 | `collectBranchGroups` | 临时仓库包含 `main` 和两个超过 90 天未提交的 feature 分支。 | active 为空；stale 按最近提交日期升序排列；`main` 不出现在分组中。 |
+| 只有默认分支时单独返回默认分支 | `collectBranchGroups` | 临时仓库只包含 `main` 分支。 | `defaultBranch` 为 `main` 并标记为当前分支；active 和 stale 均为空。 |
 
 ## 热力图统计单测
 

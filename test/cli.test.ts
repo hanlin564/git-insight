@@ -260,10 +260,38 @@ test('未指定 --branch 时展示活跃和不活跃分支', async t => {
 	]);
 
 	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, /^Default Branch$/m);
+	assert.match(result.output, new RegExp(`main\\s+${escapeRegExp(recentDate)}`));
 	assert.match(result.output, /^Active Branches$/m);
 	assert.match(result.output, new RegExp(`feature/active\\s+${escapeRegExp(recentDate)}`));
 	assert.match(result.output, /^Stale Branches$/m);
 	assert.match(result.output, new RegExp(`current feature/stale\\s+${escapeRegExp(staleDate)}`));
+});
+
+test('只有默认分支时单独展示默认分支', async t => {
+	const repo = await createTempGitRepository(t);
+	const recentDate = formatDate(addDays(startOfLocalDay(new Date()), -10));
+	await repo.commitFile({
+		date: recentDate,
+		message: 'main 提交',
+		filePath: 'main.txt',
+		content: 'main\n'
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--last',
+		'3650'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, /^Default Branch$/m);
+	assert.match(result.output, new RegExp(`current main\\s+${escapeRegExp(recentDate)}`));
+	assert.match(result.output, /^Active Branches$/m);
+	assert.match(result.output, /No active branches/);
+	assert.match(result.output, /^Stale Branches$/m);
+	assert.match(result.output, /No stale branches/);
 });
 
 test('支持 detached HEAD 状态下分析当前提交', async t => {

@@ -2,7 +2,7 @@ import {mkdir, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import type {RepositoryStats} from '../analysis/collectRepositoryStats.js';
 import type {CliOptions} from '../cli/parseArgs.js';
-import type {AuthorStat, BranchSummary, GitUserIdentity, HeatmapPeriodCount} from '../git/types.js';
+import type {AuthorStat, BranchGroups, BranchSummary, GitUserIdentity, HeatmapPeriodCount} from '../git/types.js';
 import {getMessages, type SupportedLanguage} from '../i18n.js';
 import {formatNumber} from '../utils/number.js';
 
@@ -102,7 +102,7 @@ ${renderHeatmap(stats.heatmap?.periods ?? [], stats.heatmap?.granularity ?? 'dai
 
 ${stats.authorStats.length > 0 ? renderRankings(stats, options.me, language) : renderEmptySection(t.ui.noMatchingCommits)}
 
-${!options.branch && stats.branchGroups ? renderBranchActivity(stats.branchGroups.active, stats.branchGroups.stale, language) : ''}
+${!options.branch && stats.branchGroups ? renderBranchActivity(stats.branchGroups, language) : ''}
 		</section>
 
 		<footer class="footer">
@@ -280,11 +280,7 @@ function renderRankingRow(item: RankingItem, items: RankingItem[]): string {
 	return `							<div class="${className}"><span class="rank">#${item.rank ?? ''}</span><span class="name">${escapeHtml(item.label)}</span><span class="bar-track"><span class="bar" style="width: ${width}%"></span></span><span class="value">${escapeHtml(formatNumber(item.value ?? 0))}</span></div>`;
 }
 
-function renderBranchActivity(
-	active: BranchSummary[],
-	stale: BranchSummary[],
-	language: SupportedLanguage
-): string {
+function renderBranchActivity(groups: BranchGroups, language: SupportedLanguage): string {
 	const t = getMessages(language);
 
 	return `			<section class="section">
@@ -295,8 +291,9 @@ function renderBranchActivity(
 					</div>
 				</div>
 				<div class="branch-grid">
-					${renderBranchPanel(t.ui.activeBranchesTitle, t.html.activeBranchesDescription, active, t.ui.noActiveBranches, language)}
-					${renderBranchPanel(t.ui.staleBranchesTitle, t.html.staleBranchesDescription, stale, t.ui.noStaleBranches, language)}
+					${renderBranchPanel(t.ui.defaultBranchTitle, t.html.defaultBranchDescription, groups.defaultBranch ? [groups.defaultBranch] : [], t.ui.noDefaultBranch, language, false)}
+					${renderBranchPanel(t.ui.activeBranchesTitle, t.html.activeBranchesDescription, groups.active, t.ui.noActiveBranches, language)}
+					${renderBranchPanel(t.ui.staleBranchesTitle, t.html.staleBranchesDescription, groups.stale, t.ui.noStaleBranches, language)}
 				</div>
 			</section>`;
 }
@@ -306,7 +303,8 @@ function renderBranchPanel(
 	description: string,
 	branches: BranchSummary[],
 	emptyText: string,
-	language: SupportedLanguage
+	language: SupportedLanguage,
+	showIndex = true
 ): string {
 	return `<article class="branch-panel">
 						<header>
@@ -314,17 +312,18 @@ function renderBranchPanel(
 							<p>${escapeHtml(description)}</p>
 						</header>
 						<div class="branch-list">
-${branches.length === 0 ? `							<p class="empty-state">${escapeHtml(emptyText)}</p>` : branches.map((branch, index) => renderBranch(branch, index, language)).join('\n')}
+${branches.length === 0 ? `							<p class="empty-state">${escapeHtml(emptyText)}</p>` : branches.map((branch, index) => renderBranch(branch, index, language, showIndex)).join('\n')}
 						</div>
 					</article>`;
 }
 
-function renderBranch(branch: BranchSummary, index: number, language: SupportedLanguage): string {
+function renderBranch(branch: BranchSummary, index: number, language: SupportedLanguage, showIndex = true): string {
 	const label = branch.isCurrentBranch
 		? `${getMessages(language).ui.currentBranchPrefix} ${branch.branchName}`
 		: branch.branchName;
+	const rank = showIndex ? `#${index + 1}` : '';
 
-	return `							<div class="branch"><span class="branch-index">#${index + 1}</span><span class="branch-name">${escapeHtml(label)}</span><span class="branch-date">${escapeHtml(branch.latestCommitDate ?? '-')}</span></div>`;
+	return `							<div class="branch"><span class="branch-index">${rank}</span><span class="branch-name">${escapeHtml(label)}</span><span class="branch-date">${escapeHtml(branch.latestCommitDate ?? '-')}</span></div>`;
 }
 
 function renderEmptySection(message: string): string {
@@ -863,7 +862,7 @@ const REPORT_CSS = `		:root {
 
 		.branch-grid {
 			display: grid;
-			grid-template-columns: 1fr 1fr;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
 			gap: 22px;
 		}
 

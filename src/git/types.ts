@@ -41,6 +41,7 @@ export type BranchSummary = {
 };
 
 export type BranchGroups = {
+	defaultBranch?: BranchSummary;
 	active: BranchSummary[];
 	stale: BranchSummary[];
 	defaultBranchName?: string;

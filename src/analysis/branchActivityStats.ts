@@ -13,12 +13,14 @@ export async function collectBranchGroups(
 ): Promise<BranchGroups> {
 	const branches = await getLocalBranches(repoPath);
 	const defaultBranchName = await resolveDefaultBranchName(repoPath, branches, currentBranchName);
+	const defaultBranch = branches.find(branch => branch.name === defaultBranchName);
 	const staleThresholdDate = formatDate(addDays(startOfLocalDay(today), -STALE_THRESHOLD_DAYS));
 	const summaries = branches
 		.filter(branch => branch.name !== defaultBranchName)
 		.map(branch => toBranchSummary(branch, currentBranchName));
 
 	return {
+		defaultBranch: defaultBranch ? toBranchSummary(defaultBranch, currentBranchName) : undefined,
 		active: summaries
 			.filter(branch => isActiveBranch(branch, staleThresholdDate))
 			.sort(compareLatestDateDesc)
