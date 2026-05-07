@@ -21,6 +21,14 @@ export type CommitRecord = {
 	date: string;
 	additions: number;
 	deletions: number;
+	files: CommitFileChange[];
+};
+
+export type CommitFileChange = {
+	path: string;
+	additions: number;
+	deletions: number;
+	changedLines: number;
 };
 
 export type AuthorStat = {
@@ -53,4 +61,19 @@ export type HeatmapGranularity = 'daily' | 'monthly';
 export type HeatmapPeriodCount = {
 	period: string;
 	count: number;
+};
+
+export type FileHotspotStat = {
+	label: string;
+	changedLines: number;
+	additions: number;
+	deletions: number;
+	commitCount: number;
+	authorCount: number;
+};
+
+export type FileHotspotStats = {
+	topFiles: FileHotspotStat[];
+	topExtensions: FileHotspotStat[];
+	multiAuthorFiles: FileHotspotStat[];
 };

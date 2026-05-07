@@ -32,7 +32,7 @@ export function BarChart({
 	barChar = '█'
 }: BarChartProps) {
 	const max = Math.max(...items.map(item => item.value ?? 0), 0);
-	const labelWidth = Math.min(Math.max(...items.filter(item => !item.isGap).map(item => getDisplayWidth(item.label)), 0), 32);
+	const labelWidth = Math.max(...items.filter(item => !item.isGap).map(item => getDisplayWidth(item.label)), 0);
 	const rankWidth = Math.max(...items.map(item => item.rank ? getDisplayWidth(`#${item.rank}`) : 0), 0);
 	const barPadding = ' '.repeat(barGap);
 
@@ -63,7 +63,7 @@ export function BarChart({
 					<Box key={key} marginBottom={marginBottom}>
 						<Text color={rowColor} bold={item.isHighlighted}>
 							{rankLabel}{rankPadding}
-							{padEndSafe(item.label, labelWidth)}{barPadding}
+							{padEndLabel(item.label, labelWidth)}{barPadding}
 							<Text color={item.isHighlighted ? 'cyan' : color}>{getBar(value, max, width, barChar)}</Text>{barPadding}
 							{formatNumber(value)}
 						</Text>
@@ -72,6 +72,11 @@ export function BarChart({
 			})}
 		</Box>
 	);
+}
+
+function padEndLabel(value: string, length: number): string {
+	const padding = Math.max(length - getDisplayWidth(value), 0);
+	return `${value}${' '.repeat(padding)}`;
 }
 
 function getBar(value: number, max: number, width: number, barChar: string): string {

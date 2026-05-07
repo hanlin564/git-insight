@@ -34,6 +34,7 @@ npm run build
 | 测试案例 | 命令形态 | 场景 | 预期 |
 | --- | --- | --- | --- |
 | 按指定月份统计临时仓库提交，并输出排行榜 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库包含 2025-03 的 Carol 提交，以及 2025-04 的 Alice、Bob 提交。 | 默认英文；退出码为 `0`；输出仓库名、`Current branch: main`、`Analysis branch: main`、`Date range: 2025-04`、Commit Count Ranking、Alice、Bob；不输出 Carol。 |
+| 默认展示文件热点 | `git-insight --repo <临时仓库> --month 2025-04` | 仓库包含 2025-04 内多个文件改动。 | 输出 File Hotspots、Top Files by Changed Lines 和关键文件路径。 |
 | 支持 `--last` 统计最近 N 天提交 | `git-insight --repo <临时仓库> --last 7` | 仓库包含最近 7 天内的 Recent Author 提交，以及 10 天前的 Old Author 提交。 | 退出码为 `0`；输出 `Date range: Last 7 days` 和 Recent Author；不输出 Old Author。 |
 | 支持 `--year` 只统计指定年份提交 | `git-insight --repo <临时仓库> --year 2025` | 仓库包含 2024-12-31 和 2025-01-01 两个提交。 | 退出码为 `0`；输出 `Date range: 2025` 和 Target Year；不输出 Last Year。 |
 | 支持单独使用 `--from` 统计到 today | `git-insight --repo <临时仓库> --from <日期>` | 仓库包含指定起始日期前后的提交。 | 退出码为 `0`；输出 `<日期>..today`；只输出范围内作者。 |
@@ -44,12 +45,14 @@ npm run build
 | 只有默认分支时仍展示默认分支 | `git-insight --repo <临时仓库> --last 3650` | 仓库只包含最近提交的 `main` 分支。 | 退出码为 `0`；输出 `Default Branch`、`current main`、`No active branches` 和 `No stale branches`。 |
 | 支持 detached HEAD 状态下分析当前提交 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库检出到 detached HEAD。 | 退出码为 `0`；输出 `Current branch: HEAD`、`Analysis branch: HEAD` 和 Detached User。 |
 | 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `Author filter: bob@example.com` 和 Bob；不输出 Alice。 |
+| 默认输出多作者热点文件 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | Alice 和 Bob 在统计范围内先后修改同一个长路径文件。 | 退出码为 `0`；输出 File Hotspots、Multi-author Hotspot Files 和完整文件路径；不输出 Top Directories by Changed Lines；多作者热点文件的图表值为不同作者人数。 |
+| 中文配置下输出中文文件热点 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`，且包含无扩展名文件改动。 | 退出码为 `0`；输出文件热点、改动最多的文件类型和无扩展名。 |
 | 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`Your rank`，并以 `you Bob` 展示当前用户。 |
 | 使用 `--me` 但仓库没有 Git 用户配置时返回可读错误 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 临时仓库不配置本地 `user.name` 和 `user.email`，运行环境也隔离了 HOME。 | 退出码为 `1`；输出 `Could not read the current Git configured user`。 |
 | 空仓库会输出无提交数据提示 | `git-insight --repo <空临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库已 `git init`，但没有任何提交。 | 退出码为 `0`；输出 `No matching commit data in the current date range`；不输出 Ranking。 |
-| 支持 `--html` 按指定路径生成英文报告 | `git-insight --repo <临时仓库> --month 2025-04 --html --path <report.html>` | 仓库包含 2025-04 的 Alice、Bob 提交，报告路径位于独立临时目录。 | 退出码为 `0`；输出生成路径；报告文件包含 `<html lang="en">`、英文标题、仓库名、作者排行榜、Alice、Bob 和热力图容器。 |
+| 支持 `--html` 按指定路径生成英文报告 | `git-insight --repo <临时仓库> --month 2025-04 --html --path <report.html>` | 仓库包含 2025-04 的 Alice、Bob 提交，报告路径位于独立临时目录。 | 退出码为 `0`；输出生成路径；报告文件包含 `<html lang="en">`、英文标题、仓库名、文件热点、热点独立宽布局、作者排行榜、Alice、Bob、热力图容器，并为仓库名、作者名和文件路径写入悬浮完整文本。 |
 | 支持 `--html` 不指定 `--path` 时生成到仓库根目录 | `git-insight --repo <临时仓库> --month 2025-04 --html` | 仓库包含提交，未显式指定报告文件路径。 | 退出码为 `0`；生成 `<仓库根目录>/git-insight-report.html`；文件包含英文标题和 Date Range。 |
-| 仓库配置 `language: "zh"` 时 `--html` 生成中文报告 | `git-insight --repo <临时仓库> --month 2025-04 --html --path <中文报告.html>` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 退出码为 `0`；输出中文生成提示；报告包含 `<html lang="zh-CN">`、中文标题、作者排行榜和提交数排行榜；不输出英文 `Repository`。 |
+| 仓库配置 `language: "zh"` 时 `--html` 生成中文报告 | `git-insight --repo <临时仓库> --month 2025-04 --html --path <中文报告.html>` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 退出码为 `0`；输出中文生成提示；报告包含 `<html lang="zh-CN">`、中文标题、文件热点、作者排行榜和提交数排行榜；不输出英文 `Repository`。 |
 | `--html` 分析非 Git 目录时不生成报告 | `git-insight --repo <临时非 Git 目录> --html --path <report.html>` | 创建普通临时目录，不执行 `git init`，同时指定报告路径。 | 退出码为 `1`；输出 `Not a Git repository`；报告文件不存在。 |
 | 非 Git 目录会返回可读错误 | `git-insight --repo <临时非 Git 目录>` | 创建普通临时目录，不执行 `git init`。 | 退出码为 `1`；输出 `Not a Git repository`。 |
 | 不存在的分支会返回可读错误 | `git-insight --repo <临时仓库> --branch missing-branch` | 仓库存在提交，但指定分支不存在。 | 退出码为 `1`；输出 `Branch not found: missing-branch`。 |
@@ -83,8 +86,9 @@ npm run build
 
 | 测试案例 | 被测对象 | 场景 | 预期 |
 | --- | --- | --- | --- |
-| 解析多提交和多文件改动 | `parseGitLogWithNumstat` | 构造包含两个 commit、多条 numstat 的 Git log 文本。 | 正确解析 hash、作者、日期、additions、deletions。 |
-| 将二进制文件 numstat 计为 0 | `parseGitLogWithNumstat` | numstat 中 additions/deletions 为 `-`。 | additions 和 deletions 都为 `0`。 |
+| 解析多提交和多文件改动 | `parseGitLogWithNumstat` | 构造包含两个 commit、多条 numstat 的 Git log 文本。 | 正确解析 hash、作者、日期、提交级 additions/deletions 和文件级改动列表。 |
+| 保留包含空格的文件路径 | `parseGitLogWithNumstat` | numstat 文件路径包含空格。 | 文件级改动列表保留完整路径。 |
+| 将二进制文件 numstat 计为 0 | `parseGitLogWithNumstat` | numstat 中 additions/deletions 为 `-`。 | additions、deletions 和文件级 changedLines 都为 `0`。 |
 | 兼容 CRLF 换行输出 | `parseGitLogWithNumstat` | 构造使用 Windows CRLF 换行的 Git log 文本。 | 日期字段不带 `\r`，numstat 仍能正确累加。 |
 | 忽略空输出和异常 header | `parseGitLogWithNumstat` | 输入空字符串或字段不完整的 commit header。 | 返回空数组，不产生脏数据。 |
 | 读取真实仓库中的新增、修改和删除行统计 | `getLogWithNumstat` + `parseGitLogWithNumstat` | 临时仓库依次新增文件、减少内容、删除文件。 | 解析出 3 个提交，总新增行数为 3，总删除行数为 3。 |
@@ -103,6 +107,17 @@ npm run build
 | 检测同一签名匹配多个作者合并组 | `createAuthorIdentityResolver` | 一个签名同时被一个 group 的 name 和另一个 group 的 email 命中。 | 抛出 `AuthorAliasConfigError`。 |
 | 汇总提交数、增删行和每日改动速度 | `collectAuthorStats` | Alice 两个提交、Bob 一个提交，统计范围为 10 天。 | Alice 排第一；提交数、additions、deletions、changedLines、changedLinesPerDay 正确。 |
 | 支持作者过滤和当前用户标记 | `collectAuthorStats` | 按 `bob` 过滤，并传入当前用户邮箱。 | 只返回 Bob，且 `isCurrentUser` 为 `true`。 |
+
+## 文件热点统计单测
+
+文件：`test/analysis/fileHotspotStats.test.ts`
+
+| 测试案例 | 被测对象 | 场景 | 预期 |
+| --- | --- | --- | --- |
+| 汇总文件、文件类型和多作者热点 | `collectFileHotspotStats` | 构造多个文件、扩展名和同一文件多作者改动。 | 文件、扩展名排行榜按改动行数排序；多作者热点只包含满足多作者和多提交条件的文件。 |
+| 支持作者查询和当前用户过滤 | `collectFileHotspotStats` | Alice 和 Bob 修改不同文件，并分别传入作者查询和当前用户身份。 | 热点统计只包含匹配作者范围内的文件改动，多作者热点按过滤后数据重新计算。 |
+| 多作者热点优先按作者数量排序 | `collectFileHotspotStats` | 构造一个 2 位作者但改动行更多的文件，以及一个 3 位作者但改动行更少的文件。 | 多作者热点中文件按不同作者人数优先排序，3 位作者的文件排在前面。 |
+| 使用本地化无扩展名标签 | `collectFileHotspotStats` | 中文语言下统计 `LICENSE` 等无扩展名文件。 | 文件类型排行榜展示 `无扩展名`。 |
 
 ## 活跃/不活跃分支统计单测
 

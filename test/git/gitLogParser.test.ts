@@ -23,7 +23,11 @@ test('parseGitLogWithNumstat 解析多提交和多文件改动', () => {
 			authorEmail: 'alice@example.com',
 			date: '2025-04-01',
 			additions: 5,
-			deletions: 1
+			deletions: 1,
+			files: [
+				{path: 'src/a.ts', additions: 3, deletions: 1, changedLines: 4},
+				{path: 'src/b.ts', additions: 2, deletions: 0, changedLines: 2}
+			]
 		},
 		{
 			hash: 'def456',
@@ -31,8 +35,22 @@ test('parseGitLogWithNumstat 解析多提交和多文件改动', () => {
 			authorEmail: 'bob@example.com',
 			date: '2025-04-02',
 			additions: 0,
-			deletions: 4
+			deletions: 4,
+			files: [
+				{path: 'src/c.ts', additions: 0, deletions: 4, changedLines: 4}
+			]
 		}
+	]);
+});
+
+test('parseGitLogWithNumstat 保留包含空格的文件路径', () => {
+	const commits = parseGitLogWithNumstat([
+		commitHeader('abc123', 'Alice', 'alice@example.com', '2025-04-01'),
+		'3\t1\tdocs/my report.md'
+	].join('\n'));
+
+	assert.deepEqual(commits[0]?.files, [
+		{path: 'docs/my report.md', additions: 3, deletions: 1, changedLines: 4}
 	]);
 });
 
@@ -44,6 +62,9 @@ test('parseGitLogWithNumstat 将二进制文件 numstat 计为 0', () => {
 
 	assert.equal(commits[0]?.additions, 0);
 	assert.equal(commits[0]?.deletions, 0);
+	assert.deepEqual(commits[0]?.files, [
+		{path: 'asset.bin', additions: 0, deletions: 0, changedLines: 0}
+	]);
 });
 
 test('parseGitLogWithNumstat 兼容 CRLF 换行输出', () => {

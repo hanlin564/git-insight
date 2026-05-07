@@ -1,4 +1,4 @@
-import type {CommitRecord} from './types.js';
+import type {CommitFileChange, CommitRecord} from './types.js';
 
 type MutableCommit = CommitRecord;
 
@@ -26,19 +26,49 @@ const parseCommitHeader = (line: string): MutableCommit | undefined => {
 		authorEmail: authorEmail ?? '',
 		date,
 		additions: 0,
-		deletions: 0
+		deletions: 0,
+		files: []
 	};
 };
 
 const applyNumstat = (commit: MutableCommit, line: string): void => {
-	const [additions, deletions] = line.trim().split(/\s+/, 3);
+	const change = parseNumstatLine(line);
 
-	if (!additions || !deletions) {
+	if (!change) {
 		return;
 	}
 
-	commit.additions += parseNumstatValue(additions);
-	commit.deletions += parseNumstatValue(deletions);
+	commit.additions += change.additions;
+	commit.deletions += change.deletions;
+	commit.files.push(change);
+};
+
+const parseNumstatLine = (line: string): CommitFileChange | undefined => {
+	const normalizedLine = line.trimEnd();
+	const tabParts = normalizedLine.split('\t');
+	const [additions, deletions, ...pathParts] = tabParts.length >= 3
+		? tabParts
+		: parseWhitespaceSeparatedNumstat(normalizedLine);
+	const filePath = pathParts.join('\t').trim();
+
+	if (!additions || !deletions || !filePath) {
+		return undefined;
+	}
+
+	const parsedAdditions = parseNumstatValue(additions);
+	const parsedDeletions = parseNumstatValue(deletions);
+
+	return {
+		path: filePath,
+		additions: parsedAdditions,
+		deletions: parsedDeletions,
+		changedLines: parsedAdditions + parsedDeletions
+	};
+};
+
+const parseWhitespaceSeparatedNumstat = (line: string): string[] => {
+	const match = /^(\S+)\s+(\S+)\s+(.+)$/.exec(line);
+	return match ? [match[1] ?? '', match[2] ?? '', match[3] ?? ''] : [];
 };
 
 export function parseGitLogWithNumstat(output: string): CommitRecord[] {

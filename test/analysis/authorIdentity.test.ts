@@ -78,6 +78,9 @@ function commit(
 		authorEmail,
 		date,
 		additions,
-		deletions
+		deletions,
+		files: [
+			{path: `${hash}.txt`, additions, deletions, changedLines: additions + deletions}
+		]
 	};
 }

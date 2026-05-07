@@ -8,6 +8,7 @@ import {Section} from './components/Section.js';
 import {ContributionHeatmap} from './components/ContributionHeatmap.js';
 import {AuthorRanking} from './components/AuthorRanking.js';
 import {BranchActivity} from './components/BranchActivity.js';
+import {FileHotspots} from './components/FileHotspots.js';
 
 type AppProps = {
 	options: CliOptions;
@@ -57,6 +58,8 @@ export function App({options, result}: AppProps) {
 			{!options.branch && stats.branchGroups && (
 				<BranchActivity groups={stats.branchGroups} language={options.language} />
 			)}
+
+			{hasAuthorData && <FileHotspots hotspots={stats.fileHotspots} language={options.language} />}
 
 			{hasAuthorData && <AuthorRanking stats={stats} showCurrentUserContext={options.me} language={options.language} />}
 		</Box>

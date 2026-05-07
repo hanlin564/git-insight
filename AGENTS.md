@@ -60,4 +60,6 @@ PR 应包含变更摘要、已运行的验证命令、相关 issue 链接；如�
 
 新增或修改代码时，必须保持 CLI 在 macOS + zsh、Windows + cmd、Windows + PowerShell 环境下兼容。涉及路径、换行、shell 命令、npm scripts、终端 Unicode/ANSI 渲染或 Git 调用的变更，应优先使用 Node.js 跨平台 API 和不经 shell 的进程调用，并补充或更新跨平台测试。
 
+新增或调整终端条形图时，条形宽度默认采用细线样式，优先使用现有代码量排行一致的 `━`，避免使用过粗的 `█` 造成行高或视觉重量不一致；条形图标签必须完整显示，不要为了对齐强行截断作者名、路径或文件名。
+
 后续需要手动验证 CLI 行为时，优先使用 `/Users/wanghanlin/MyCodes/workingCodes/Echo` 作为常规验证仓库；需要验证多提交者、长期未维护老仓库等场景时，使用 `/Users/wanghanlin/MyCodes/workingCodes/Erp` 作为实验对象。

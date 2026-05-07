@@ -2,7 +2,7 @@ import {mkdir, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import type {RepositoryStats} from '../analysis/collectRepositoryStats.js';
 import type {CliOptions} from '../cli/parseArgs.js';
-import type {AuthorStat, BranchGroups, BranchSummary, GitUserIdentity, HeatmapPeriodCount} from '../git/types.js';
+import type {AuthorStat, BranchGroups, BranchSummary, FileHotspotStat, GitUserIdentity, HeatmapPeriodCount} from '../git/types.js';
 import {getMessages, type SupportedLanguage} from '../i18n.js';
 import {formatNumber} from '../utils/number.js';
 
@@ -23,6 +23,7 @@ type RankingAuthor = {
 type RankingItem = {
 	key: string;
 	label: string;
+	title?: string;
 	rank?: number;
 	value?: number;
 	isGap?: boolean;
@@ -85,7 +86,7 @@ ${REPORT_CSS}
 				<h1>${escapeHtml(html.reportTitle)}</h1>
 			</div>
 			<div class="meta-panel" aria-label="${escapeHtml(html.metadataLabel)}">
-${metaRows.map(([label, value]) => `				<div class="meta-row"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join('\n')}
+${metaRows.map(([label, value]) => `				<div class="meta-row"><span>${escapeHtml(label)}</span><b${titleAttribute(value)}>${escapeHtml(value)}</b></div>`).join('\n')}
 			</div>
 		</section>
 
@@ -99,6 +100,8 @@ ${metaRows.map(([label, value]) => `				<div class="meta-row"><span>${escapeHtml
 				</div>
 ${renderHeatmap(stats.heatmap?.periods ?? [], stats.heatmap?.granularity ?? 'daily', language)}
 			</section>
+
+${stats.authorStats.length > 0 ? renderFileHotspots(stats, language) : ''}
 
 ${stats.authorStats.length > 0 ? renderRankings(stats, options.me, language) : renderEmptySection(t.ui.noMatchingCommits)}
 
@@ -249,6 +252,62 @@ ${panels.map(panel => renderRankingPanel(panel, showCurrentUserContext, language
 			</section>`;
 }
 
+function renderFileHotspots(stats: RepositoryStats, language: SupportedLanguage): string {
+	const t = getMessages(language).ui;
+	const panels = [
+		{title: t.topFilesTitle, items: stats.fileHotspots.topFiles, showMeta: false, value: 'changedLines' as const},
+		{title: t.topExtensionsTitle, items: stats.fileHotspots.topExtensions, showMeta: false, value: 'changedLines' as const},
+		{title: t.multiAuthorFilesTitle, items: stats.fileHotspots.multiAuthorFiles, showMeta: true, value: 'authorCount' as const}
+	];
+
+	return `			<section class="section">
+				<div class="section-head">
+					<div>
+						<h2>${escapeHtml(t.fileHotspotsTitle)}</h2>
+					</div>
+				</div>
+				<div class="hotspot-grid">
+${panels.map(panel => renderHotspotPanel(panel.title, panel.items, panel.showMeta, panel.value, language)).join('\n')}
+				</div>
+			</section>`;
+}
+
+function renderHotspotPanel(
+	title: string,
+	items: FileHotspotStat[],
+	showMeta: boolean,
+	valueKey: 'changedLines' | 'authorCount',
+	language: SupportedLanguage
+): string {
+	const t = getMessages(language).ui;
+
+	return `					<article class="ranking-panel hotspot-panel">
+						<header>
+							<h3>${escapeHtml(title)}</h3>
+						</header>
+						<div class="rank-list">
+${items.length === 0 ? `							<p class="empty-state">${escapeHtml(t.noFileHotspots)}</p>` : items.map((item, index) => renderHotspotRow(item, index, items, showMeta, valueKey, language)).join('\n')}
+						</div>
+					</article>`;
+}
+
+function renderHotspotRow(
+	item: FileHotspotStat,
+	index: number,
+	items: FileHotspotStat[],
+	showMeta: boolean,
+	valueKey: 'changedLines' | 'authorCount',
+	language: SupportedLanguage
+): string {
+	const t = getMessages(language).ui;
+	const value = item[valueKey];
+	const max = Math.max(...items.map(item => item[valueKey]), 0);
+	const width = max <= 0 ? 0 : Math.max(1, Math.round((value / max) * 100));
+	const meta = showMeta ? ` <span class="rank-note">${escapeHtml(t.hotspotMeta(item.authorCount, item.commitCount))}</span>` : '';
+
+	return `							<div class="rank-row hotspot-row"><span class="rank">#${index + 1}</span><span class="name hotspot-name"${titleAttribute(item.label)}>${escapeHtml(item.label)}${meta}</span><span class="bar-track"><span class="bar" style="width: ${width}%"></span></span><span class="value">${escapeHtml(formatNumber(value))}</span></div>`;
+}
+
 function renderRankingPanel(panel: RankingPanel, showCurrentUserContext: boolean, language: SupportedLanguage): string {
 	const t = getMessages(language).ui;
 	const note = showCurrentUserContext
@@ -277,7 +336,7 @@ function renderRankingRow(item: RankingItem, items: RankingItem[]): string {
 	const width = max <= 0 ? 0 : Math.max(1, Math.round(((item.value ?? 0) / max) * 100));
 	const className = item.isHighlighted ? 'rank-row current' : 'rank-row';
 
-	return `							<div class="${className}"><span class="rank">#${item.rank ?? ''}</span><span class="name">${escapeHtml(item.label)}</span><span class="bar-track"><span class="bar" style="width: ${width}%"></span></span><span class="value">${escapeHtml(formatNumber(item.value ?? 0))}</span></div>`;
+	return `							<div class="${className}"><span class="rank">#${item.rank ?? ''}</span><span class="name"${titleAttribute(item.title ?? item.label)}>${escapeHtml(item.label)}</span><span class="bar-track"><span class="bar" style="width: ${width}%"></span></span><span class="value">${escapeHtml(formatNumber(item.value ?? 0))}</span></div>`;
 }
 
 function renderBranchActivity(groups: BranchGroups, language: SupportedLanguage): string {
@@ -323,7 +382,7 @@ function renderBranch(branch: BranchSummary, index: number, language: SupportedL
 		: branch.branchName;
 	const rank = showIndex ? `#${index + 1}` : '';
 
-	return `							<div class="branch"><span class="branch-index">${rank}</span><span class="branch-name">${escapeHtml(label)}</span><span class="branch-date">${escapeHtml(branch.latestCommitDate ?? '-')}</span></div>`;
+	return `							<div class="branch"><span class="branch-index">${rank}</span><span class="branch-name"${titleAttribute(label)}>${escapeHtml(label)}</span><span class="branch-date">${escapeHtml(branch.latestCommitDate ?? '-')}</span></div>`;
 }
 
 function renderEmptySection(message: string): string {
@@ -409,6 +468,7 @@ function toAuthorItems(authors: RankingAuthor[], allAuthors: RankingAuthor[], la
 			key: author.authorEmail ? `${author.authorName}-${author.authorEmail}-${rank}` : `${author.authorName}-${rank}`,
 			rank,
 			label: getAuthorLabel(author, (nameCounts.get(author.authorName) ?? 0) > 1, author.isCurrentUser === true, language),
+			title: getAuthorTitle(author, author.isCurrentUser === true, language),
 			value,
 			isHighlighted: author.isCurrentUser === true
 		});
@@ -425,6 +485,16 @@ function getAuthorLabel(author: AuthorStat, needsEmail: boolean, isCurrentUser: 
 	}
 
 	return `${prefix}${author.authorName} <${getEmailHandle(author.authorEmail)}>`;
+}
+
+function getAuthorTitle(author: AuthorStat, isCurrentUser: boolean, language: SupportedLanguage): string {
+	const prefix = isCurrentUser ? `${getMessages(language).ui.currentUserPrefix} ` : '';
+
+	if (author.authorEmail) {
+		return `${prefix}${author.authorName} <${author.authorEmail}>`;
+	}
+
+	return `${prefix}${author.authorName}`;
 }
 
 function getEmailHandle(email: string): string {
@@ -506,6 +576,10 @@ function escapeHtml(value: string): string {
 		.replace(/>/g, '&gt;')
 		.replace(/"/g, '&quot;')
 		.replace(/'/g, '&#39;');
+}
+
+function titleAttribute(value: string): string {
+	return ` title="${escapeHtml(value)}"`;
 }
 
 const REPORT_CSS = `		:root {
@@ -762,6 +836,12 @@ const REPORT_CSS = `		:root {
 			gap: 22px;
 		}
 
+		.hotspot-grid {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 18px;
+		}
+
 		.ranking-panel,
 		.branch-panel {
 			min-width: 0;
@@ -822,6 +902,21 @@ const REPORT_CSS = `		:root {
 			text-overflow: ellipsis;
 			white-space: nowrap;
 			font-weight: 650;
+		}
+
+		.hotspot-row {
+			grid-template-columns: 34px minmax(280px, 1fr) minmax(120px, 240px) 74px;
+			align-items: start;
+			padding: 8px 0;
+		}
+
+		.hotspot-name {
+			overflow: visible;
+			text-overflow: clip;
+			white-space: normal;
+			overflow-wrap: anywhere;
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			line-height: 1.35;
 		}
 
 		.bar-track {

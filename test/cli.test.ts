@@ -23,6 +23,9 @@ test('按指定月份统计临时仓库提交，并输出排行榜', async t => 
 	assert.match(result.output, /Analysis branch:\s+main/);
 	assert.match(result.output, /Date range:\s*2025-04/);
 	assert.match(result.output, /Commit Count Ranking/);
+	assert.match(result.output, /File Hotspots/);
+	assert.match(result.output, /Top Files by Changed Lines/);
+	assert.match(result.output, /src\/b\.txt/);
 	assert.match(result.output, /Alice/);
 	assert.match(result.output, /Bob/);
 	assert.doesNotMatch(result.output, /Carol/);
@@ -342,6 +345,69 @@ test('支持 --author 过滤作者数据', async t => {
 	assert.doesNotMatch(result.output, /Alice/);
 });
 
+test('默认输出多作者热点文件', async t => {
+	const repo = await createTempGitRepository(t);
+	const sharedPath = 'src/modules/reporting/deeply/nested/shared-hotspot-file.ts';
+	await repo.commitFile({
+		date: '2025-04-01',
+		message: 'Alice 修改共享文件',
+		filePath: sharedPath,
+		content: 'one\n',
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com'
+	});
+	await repo.commitFile({
+		date: '2025-04-02',
+		message: 'Bob 修改共享文件',
+		filePath: sharedPath,
+		content: 'one\ntwo\nthree\n',
+		authorName: 'Bob',
+		authorEmail: 'bob@example.com'
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--from',
+		'2025-04-01',
+		'--to',
+		'2025-04-30'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, /File Hotspots/);
+	assert.doesNotMatch(result.output, /Top Directories by Changed Lines/);
+	assert.match(result.output, /Multi-author Hotspot Files/);
+	assert.match(result.output, new RegExp(`${escapeRegExp(sharedPath)}\\s+━+\\s+2`));
+});
+
+test('仓库配置 language 为 zh 时输出中文文件热点', async t => {
+	const repo = await createTempGitRepository(t);
+	await repo.writeConfig(JSON.stringify({language: 'zh'}));
+	await repo.commitFile({
+		date: '2025-04-01',
+		message: '无扩展名文件',
+		filePath: 'LICENSE',
+		content: 'license\n',
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com'
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--from',
+		'2025-04-01',
+		'--to',
+		'2025-04-30'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, /文件热点/);
+	assert.match(result.output, /改动最多的文件类型/);
+	assert.match(result.output, /无扩展名/);
+});
+
 test('支持 --me 使用临时仓库本地 Git 用户配置', async t => {
 	const repo = await createRepositoryWithHistory(t);
 	await repo.configUser('Bob', 'bob@example.com');
@@ -430,6 +496,13 @@ test('支持 --html 按指定路径生成英文报告', async t => {
 	assert.match(html, /Git Repository Analysis Report/);
 	assert.match(html, new RegExp(escapeRegExp(repo.name)));
 	assert.match(html, /Author Rankings/);
+	assert.match(html, /File Hotspots/);
+	assert.match(html, /Top Files by Changed Lines/);
+	assert.match(html, /class="hotspot-grid"/);
+	assert.match(html, /src\/b\.txt/);
+	assert.match(html, /title="src\/b\.txt"/);
+	assert.match(html, /title="Alice &lt;alice@example\.com&gt;"/);
+	assert.match(html, new RegExp(`title="${escapeRegExp(repo.name)}"`));
 	assert.match(html, /Commit Count Ranking/);
 	assert.match(html, /Alice/);
 	assert.match(html, /Bob/);
@@ -481,6 +554,7 @@ test('仓库配置 language 为 zh 时 --html 生成中文报告', async t => {
 	const html = await readFile(outputPath, 'utf8');
 	assert.match(html, /<html lang="zh-CN">/);
 	assert.match(html, /Git 仓库分析报告/);
+	assert.match(html, /文件热点/);
 	assert.match(html, /作者排行榜/);
 	assert.match(html, /提交数排行榜/);
 	assert.doesNotMatch(html, /Repository/);

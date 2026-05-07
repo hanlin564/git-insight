@@ -79,6 +79,13 @@ type UiMessages = {
 	changedLinesPerDayRankingTitle: string;
 	commitRankingTitle: string;
 	changedLinesRankingTitle: string;
+	fileHotspotsTitle: string;
+	topFilesTitle: string;
+	topExtensionsTitle: string;
+	multiAuthorFilesTitle: string;
+	noFileHotspots: string;
+	noExtension: string;
+	hotspotMeta: (authorCount: number, commitCount: number) => string;
 	currentRank: (rank: number, total: number) => string;
 	missingCurrentRank: (total: number) => string;
 	currentUserPrefix: string;
@@ -259,6 +266,13 @@ Examples:
 			changedLinesPerDayRankingTitle: 'Daily Code Change Velocity Ranking (lines/day)',
 			commitRankingTitle: 'Commit Count Ranking (commits)',
 			changedLinesRankingTitle: 'Code Change Ranking (lines)',
+			fileHotspotsTitle: 'File Hotspots',
+			topFilesTitle: 'Top Files by Changed Lines',
+			topExtensionsTitle: 'Top File Types by Changed Lines',
+			multiAuthorFilesTitle: 'Multi-author Hotspot Files',
+			noFileHotspots: 'No file hotspot data.',
+			noExtension: 'no extension',
+			hotspotMeta: (authorCount, commitCount) => `${authorCount} authors, ${commitCount} commits`,
 			currentRank: (rank, total) => `Your rank ${rank}/${total}`,
 			missingCurrentRank: total => `Your rank -/${total} (current Git user has no commits in this range)`,
 			currentUserPrefix: 'you',
@@ -432,6 +446,13 @@ Examples:
 			changedLinesPerDayRankingTitle: '每日代码改动增速排行榜 (行/天)',
 			commitRankingTitle: '提交数排行榜 (次)',
 			changedLinesRankingTitle: '代码改动排行榜 (行)',
+			fileHotspotsTitle: '文件热点',
+			topFilesTitle: '改动最多的文件',
+			topExtensionsTitle: '改动最多的文件类型',
+			multiAuthorFilesTitle: '多作者热点文件',
+			noFileHotspots: '暂无文件热点数据。',
+			noExtension: '无扩展名',
+			hotspotMeta: (authorCount, commitCount) => `${authorCount} 位作者，${commitCount} 次提交`,
 			currentRank: (rank, total) => `你的排名 ${rank}/${total}`,
 			missingCurrentRank: total => `你的排名 -/${total}（当前 Git 用户在统计范围内无提交）`,
 			currentUserPrefix: '你',

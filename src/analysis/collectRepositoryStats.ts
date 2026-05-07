@@ -1,6 +1,6 @@
 import {createCustomDateRange, type CliOptions} from '../cli/parseArgs.js';
 import {GitInsightConfigError} from '../config/gitInsightConfig.js';
-import type {AuthorStat, BranchGroups, CommitRecord, GitUserIdentity, RepositoryTarget} from '../git/types.js';
+import type {AuthorStat, BranchGroups, CommitRecord, FileHotspotStats, GitUserIdentity, RepositoryTarget} from '../git/types.js';
 import {getMessages} from '../i18n.js';
 import {
 	createRepositoryTarget,
@@ -18,6 +18,7 @@ import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js'
 import {createAuthorIdentityResolver} from './authorIdentity.js';
 import {collectAuthorStats, topAuthorsByChangedLines, topAuthorsByCommits} from './authorStats.js';
 import {collectBranchGroups} from './branchActivityStats.js';
+import {collectFileHotspotStats} from './fileHotspotStats.js';
 import {collectContributionHeatmap, type ContributionHeatmapStat} from './heatmapStats.js';
 
 const DEFAULT_RANKING_LIMIT = 10;
@@ -28,6 +29,7 @@ export type RepositoryStats = {
 	authorStats: AuthorStat[];
 	topByCommits: AuthorStat[];
 	topByChangedLines: AuthorStat[];
+	fileHotspots: FileHotspotStats;
 	heatmap?: ContributionHeatmapStat;
 	branchGroups?: BranchGroups;
 	currentGitUser?: GitUserIdentity;
@@ -71,6 +73,14 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 				authorStats,
 				topByCommits: topAuthorsByCommits(authorStats, DEFAULT_RANKING_LIMIT),
 				topByChangedLines: topAuthorsByChangedLines(authorStats, DEFAULT_RANKING_LIMIT),
+				fileHotspots: collectFileHotspotStats(
+					commits,
+					authorResolver,
+					options.language,
+					options.author,
+					options.me ? currentGitUser : undefined,
+					DEFAULT_RANKING_LIMIT
+				),
 				heatmap: collectContributionHeatmap(commits, range, authorResolver, options.author, currentGitUser),
 				branchGroups,
 				currentGitUser,
