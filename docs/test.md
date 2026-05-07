@@ -88,6 +88,7 @@ npm run build
 | --- | --- | --- | --- |
 | 解析多提交和多文件改动 | `parseGitLogWithNumstat` | 构造包含两个 commit、多条 numstat 的 Git log 文本。 | 正确解析 hash、作者、日期、提交级 additions/deletions 和文件级改动列表。 |
 | 保留包含空格的文件路径 | `parseGitLogWithNumstat` | numstat 文件路径包含空格。 | 文件级改动列表保留完整路径。 |
+| 将重命名路径规范化为目标路径 | `parseGitLogWithNumstat` | numstat 文件路径包含 Git 的 `{旧 => 新}` 紧凑重命名写法。 | 文件级改动列表使用目标路径，后续文件类型统计不会出现 `.java}` 一类后缀。 |
 | 将二进制文件 numstat 计为 0 | `parseGitLogWithNumstat` | numstat 中 additions/deletions 为 `-`。 | additions、deletions 和文件级 changedLines 都为 `0`。 |
 | 兼容 CRLF 换行输出 | `parseGitLogWithNumstat` | 构造使用 Windows CRLF 换行的 Git log 文本。 | 日期字段不带 `\r`，numstat 仍能正确累加。 |
 | 忽略空输出和异常 header | `parseGitLogWithNumstat` | 输入空字符串或字段不完整的 commit header。 | 返回空数组，不产生脏数据。 |

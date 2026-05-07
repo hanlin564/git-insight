@@ -54,6 +54,19 @@ test('parseGitLogWithNumstat 保留包含空格的文件路径', () => {
 	]);
 });
 
+test('parseGitLogWithNumstat 将重命名路径规范化为目标路径', () => {
+	const commits = parseGitLogWithNumstat([
+		commitHeader('abc123', 'Alice', 'alice@example.com', '2025-04-01'),
+		'1\t1\tsrc/main/java/{OldService.java => NewService.java}',
+		'2\t0\tsrc/{old => new}/Example.java'
+	].join('\n'));
+
+	assert.deepEqual(commits[0]?.files, [
+		{path: 'src/main/java/NewService.java', additions: 1, deletions: 1, changedLines: 2},
+		{path: 'src/new/Example.java', additions: 2, deletions: 0, changedLines: 2}
+	]);
+});
+
 test('parseGitLogWithNumstat 将二进制文件 numstat 计为 0', () => {
 	const commits = parseGitLogWithNumstat([
 		commitHeader('abc123', 'Alice', 'alice@example.com', '2025-04-01'),

@@ -49,7 +49,7 @@ const parseNumstatLine = (line: string): CommitFileChange | undefined => {
 	const [additions, deletions, ...pathParts] = tabParts.length >= 3
 		? tabParts
 		: parseWhitespaceSeparatedNumstat(normalizedLine);
-	const filePath = pathParts.join('\t').trim();
+	const filePath = normalizeNumstatPath(pathParts.join('\t').trim());
 
 	if (!additions || !deletions || !filePath) {
 		return undefined;
@@ -69,6 +69,14 @@ const parseNumstatLine = (line: string): CommitFileChange | undefined => {
 const parseWhitespaceSeparatedNumstat = (line: string): string[] => {
 	const match = /^(\S+)\s+(\S+)\s+(.+)$/.exec(line);
 	return match ? [match[1] ?? '', match[2] ?? '', match[3] ?? ''] : [];
+};
+
+const normalizeNumstatPath = (filePath: string): string => {
+	if (!filePath.includes(' => ')) {
+		return filePath;
+	}
+
+	return filePath.replace(/\{([^{}]+) => ([^{}]+)\}/g, '$2');
 };
 
 export function parseGitLogWithNumstat(output: string): CommitRecord[] {
