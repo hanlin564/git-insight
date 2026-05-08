@@ -10,6 +10,7 @@ export type GitInsightConfig = {
 	filePath?: string;
 	language: SupportedLanguage;
 	authors?: unknown;
+	excludePatterns?: string[];
 };
 
 export class GitInsightConfigError extends Error {
@@ -64,10 +65,15 @@ function parseGitInsightConfig(
 		throw new GitInsightConfigError(t.config.invalidLanguage(String(value.language)));
 	}
 
+	if (value.excludePatterns !== undefined && !isStringArray(value.excludePatterns)) {
+		throw new GitInsightConfigError(t.config.excludePatternsMustBeStringArray);
+	}
+
 	return {
 		filePath,
 		language: value.language ?? DEFAULT_LANGUAGE,
-		authors: value.authors
+		authors: value.authors,
+		excludePatterns: value.excludePatterns
 	};
 }
 
@@ -118,6 +124,10 @@ function getConfigPaths(repositoryPath: string): string[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+	return Array.isArray(value) && value.every(item => typeof item === 'string');
 }
 
 function isFileNotFoundError(error: unknown): boolean {

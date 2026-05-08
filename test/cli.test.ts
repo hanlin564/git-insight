@@ -408,6 +408,68 @@ test('仓库配置 language 为 zh 时输出中文文件热点', async t => {
 	assert.match(result.output, /无扩展名/);
 });
 
+test('仓库配置 excludePatterns 会排除统计文件、目录和通配符命中项', async t => {
+	const repo = await createTempGitRepository(t);
+	await repo.writeConfig(JSON.stringify({
+		excludePatterns: [
+			'package-lock.json',
+			'dist/',
+			'*.generated.ts'
+		]
+	}));
+	await repo.commitFile({
+		date: '2025-04-01',
+		message: '源码提交',
+		filePath: 'src/app.ts',
+		content: 'one\n',
+		authorName: 'Source Author',
+		authorEmail: 'source@example.com'
+	});
+	await repo.commitFile({
+		date: '2025-04-02',
+		message: '锁文件提交',
+		filePath: 'package-lock.json',
+		content: '{"lockfileVersion": 3}\n',
+		authorName: 'Lock Author',
+		authorEmail: 'lock@example.com'
+	});
+	await repo.commitFile({
+		date: '2025-04-03',
+		message: '构建产物提交',
+		filePath: 'dist/app.js',
+		content: 'console.log("built");\n',
+		authorName: 'Dist Author',
+		authorEmail: 'dist@example.com'
+	});
+	await repo.commitFile({
+		date: '2025-04-04',
+		message: '生成文件提交',
+		filePath: 'client.generated.ts',
+		content: 'export const generated = true;\n',
+		authorName: 'Generated Author',
+		authorEmail: 'generated@example.com'
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--from',
+		'2025-04-01',
+		'--to',
+		'2025-04-30'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.match(result.output, /Source Author/);
+	assert.match(result.output, /src\/app\.ts/);
+	assert.doesNotMatch(result.output, /Lock Author/);
+	assert.doesNotMatch(result.output, /Dist Author/);
+	assert.doesNotMatch(result.output, /Generated Author/);
+	assert.doesNotMatch(result.output, /package-lock\.json/);
+	assert.doesNotMatch(result.output, /dist\/app\.js/);
+	assert.doesNotMatch(result.output, /client\.generated\.ts/);
+});
+
 test('支持 --me 使用临时仓库本地 Git 用户配置', async t => {
 	const repo = await createRepositoryWithHistory(t);
 	await repo.configUser('Bob', 'bob@example.com');

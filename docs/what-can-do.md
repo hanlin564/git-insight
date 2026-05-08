@@ -32,15 +32,15 @@ Git Insight 已经具备单仓库提交活跃度分析的核心能力，包括�
 
 当前已实现改动最多的文件、改动最多的文件类型，以及按不同作者人数排序的多作者热点文件分析。
 
-### 2. 统计排除规则
+### 2. 统计排除规则（已完成基础版）
 
 当前 `changedLines = additions + deletions` 容易被锁文件、生成文件、构建产物、迁移脚本或格式化提交污染。建议在 `.git-insight.json` 中支持：
 
-- `excludePaths`
-- `includePaths`
-- `ignoreGenerated`
+- `excludePatterns`
 
 价值：提高排行榜和热点统计可信度，避免把无意义的大文件改动误判成真实代码贡献或风险。
+
+当前已实现 `excludePatterns`，支持接近 `.gitignore` 的文件、目录和通配符写法，用于过滤统计口径，不影响 Git 跟踪状态。后续如有需要，再评估 `includePatterns` 或 `ignoreGenerated`。
 
 ### 3. 周期对比
 
@@ -102,7 +102,7 @@ README 中已提到后续结构预留多仓库扫描能力。可以增加：
 建议按以下顺序推进：
 
 1. [x] 路径热点和文件热点分析。
-2. 统计排除规则。
+2. [x] 统计排除规则基础版。
 3. 周期对比。
 4. 分支治理增强。
 5. JSON 和 CSV 输出。

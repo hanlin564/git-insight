@@ -1,5 +1,5 @@
 import {createCustomDateRange, type CliOptions} from '../cli/parseArgs.js';
-import {GitInsightConfigError} from '../config/gitInsightConfig.js';
+import {GitInsightConfigError, loadGitInsightConfig} from '../config/gitInsightConfig.js';
 import type {AuthorStat, BranchGroups, CommitRecord, FileHotspotStats, GitUserIdentity, RepositoryTarget} from '../git/types.js';
 import {getMessages} from '../i18n.js';
 import {
@@ -18,6 +18,7 @@ import {AuthorAliasConfigError, loadAuthorAliasLookup} from './authorAliases.js'
 import {createAuthorIdentityResolver} from './authorIdentity.js';
 import {collectAuthorStats, topAuthorsByChangedLines, topAuthorsByCommits} from './authorStats.js';
 import {collectBranchGroups} from './branchActivityStats.js';
+import {applyExcludePatterns} from './excludePatterns.js';
 import {collectFileHotspotStats} from './fileHotspotStats.js';
 import {collectContributionHeatmap, type ContributionHeatmapStat} from './heatmapStats.js';
 
@@ -51,7 +52,8 @@ export async function collectRepositoryStats(options: CliOptions): Promise<Repos
 		const branch = await resolveAnalysisBranch(repository.path, options.branch, currentBranchName);
 		const range = await resolveDateRange(repository.path, branch.ref, options);
 		const logOutput = branch.ref ? await getLogWithNumstat(repository.path, range, branch.ref) : '';
-		const commits = parseGitLogWithNumstat(logOutput);
+		const config = await loadGitInsightConfig(repository.path, options.language);
+		const commits = applyExcludePatterns(parseGitLogWithNumstat(logOutput), config.excludePatterns);
 		const authorAliases = await loadAuthorAliasLookup(repository.path, options.language);
 		const authorResolver = createAuthorIdentityResolver(commits, authorAliases, options.language);
 		const currentGitUser = options.me ? await getCurrentGitUser(repository.path) : undefined;

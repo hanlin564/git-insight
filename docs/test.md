@@ -47,6 +47,7 @@ npm run build
 | 支持 `--author` 过滤作者数据 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author bob@example.com` | 仓库在范围内包含 Alice 和 Bob 提交。 | 退出码为 `0`；输出 `Author filter: bob@example.com` 和 Bob；不输出 Alice。 |
 | 默认输出多作者热点文件 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | Alice 和 Bob 在统计范围内先后修改同一个长路径文件。 | 退出码为 `0`；输出 File Hotspots、Multi-author Hotspot Files 和完整文件路径；不输出 Top Directories by Changed Lines；多作者热点文件的图表值为不同作者人数。 |
 | 中文配置下输出中文文件热点 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`，且包含无扩展名文件改动。 | 退出码为 `0`；输出文件热点、改动最多的文件类型和无扩展名。 |
+| 仓库配置 `excludePatterns` 会排除统计文件、目录和通配符命中项 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库内 `.git-insight.json` 设置 `excludePatterns`，包含精确文件、目录和通配符规则；仓库提交源码、锁文件、构建产物和生成文件。 | 退出码为 `0`；只输出源码作者和源码文件；不输出被排除文件的作者、路径和文件热点。 |
 | 支持 `--me` 使用临时仓库本地 Git 用户配置 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 仓库本地 Git 用户配置为 `Bob <bob@example.com>`。 | 退出码为 `0`；输出当前用户、`Your rank`，并以 `you Bob` 展示当前用户。 |
 | 使用 `--me` 但仓库没有 Git 用户配置时返回可读错误 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --me` | 临时仓库不配置本地 `user.name` 和 `user.email`，运行环境也隔离了 HOME。 | 退出码为 `1`；输出 `Could not read the current Git configured user`。 |
 | 空仓库会输出无提交数据提示 | `git-insight --repo <空临时仓库> --from 2025-04-01 --to 2025-04-30` | 仓库已 `git init`，但没有任何提交。 | 退出码为 `0`；输出 `No matching commit data in the current date range`；不输出 Ranking。 |
@@ -66,6 +67,15 @@ npm run build
 | 中文配置下帮助和未知参数输出中文 | `git-insight --repo <临时仓库> --help`、`git-insight --repo <临时仓库> --since` | 仓库内 `.git-insight.json` 设置 `{ "language": "zh" }`。 | 帮助输出 `用法：`、`选项：`；未知参数输出 `错误：未知选项 '--since'`。 |
 | 非法 `language` 配置会返回可读错误 | `git-insight --repo <临时仓库> --help` | 仓库内 `.git-insight.json` 设置 `{ "language": "ja" }`。 | 退出码为 `1`；输出 `Git Insight config language must be "en" or "zh"`。 |
 | 临时仓库内的作者合并配置会参与命令统计 | `git-insight --repo <临时仓库> --from 2025-04-01 --to 2025-04-30 --author team@example.com` | 仓库内 `.git-insight.json` 将 Alice 合并展示为 `Alice Team <team@example.com>`。 | 退出码为 `0`；输出 Alice Team；不输出 Bob。 |
+
+## 配置解析单测
+
+文件：`test/config/gitInsightConfig.test.ts`
+
+| 测试案例 | 被测对象 | 场景 | 预期 |
+| --- | --- | --- | --- |
+| 读取 `excludePatterns` 配置 | `loadGitInsightConfig` | 仓库内 `.git-insight.json` 包含精确文件、目录和通配符模式。 | 返回原始字符串数组，供统计过滤使用。 |
+| 拒绝非法 `excludePatterns` 配置 | `loadGitInsightConfig` | `excludePatterns` 不是数组，或数组内包含非字符串。 | 抛出 `GitInsightConfigError` 和对应英文错误。 |
 
 ## 参数解析单测
 
@@ -111,10 +121,12 @@ npm run build
 
 ## 文件热点统计单测
 
-文件：`test/analysis/fileHotspotStats.test.ts`
+文件：`test/analysis/excludePatterns.test.ts`、`test/analysis/fileHotspotStats.test.ts`
 
 | 测试案例 | 被测对象 | 场景 | 预期 |
 | --- | --- | --- | --- |
+| 按 `excludePatterns` 过滤提交文件 | `applyExcludePatterns` | 一个提交同时包含源码和锁文件，另有构建产物和生成文件提交。 | 精确文件、目录和通配符命中项被排除；剩余提交重算 additions、deletions；只剩排除文件的提交被移除。 |
+| 未配置 `excludePatterns` 时保持原数据 | `applyExcludePatterns` | 不传排除规则。 | 返回原提交数组引用，避免无意义复制。 |
 | 汇总文件、文件类型和多作者热点 | `collectFileHotspotStats` | 构造多个文件、扩展名和同一文件多作者改动。 | 文件、扩展名排行榜按改动行数排序；多作者热点只包含满足多作者和多提交条件的文件。 |
 | 支持作者查询和当前用户过滤 | `collectFileHotspotStats` | Alice 和 Bob 修改不同文件，并分别传入作者查询和当前用户身份。 | 热点统计只包含匹配作者范围内的文件改动，多作者热点按过滤后数据重新计算。 |
 | 多作者热点优先按作者数量排序 | `collectFileHotspotStats` | 构造一个 2 位作者但改动行更多的文件，以及一个 3 位作者但改动行更少的文件。 | 多作者热点中文件按不同作者人数优先排序，3 位作者的文件排在前面。 |

@@ -108,6 +108,7 @@ type ConfigMessages = {
 	jsonFormatError: (filePath: string) => string;
 	mustBeObject: string;
 	invalidLanguage: (language: string) => string;
+	excludePatternsMustBeStringArray: string;
 	authorsMustBeArray: string;
 	authorGroupMustBeObject: (index: number) => string;
 	displayNameMustBeString: (index: number) => string;
@@ -293,6 +294,7 @@ Examples:
 			jsonFormatError: filePath => `Git Insight config JSON format error: ${filePath}`,
 			mustBeObject: 'Git Insight config must be an object.',
 			invalidLanguage: language => `Git Insight config language must be "en" or "zh", got: ${language}`,
+			excludePatternsMustBeStringArray: 'Git Insight config excludePatterns must be a string array.',
 			authorsMustBeArray: 'Git Insight config authors must be an array.',
 			authorGroupMustBeObject: index => `Author alias group ${index} must be an object.`,
 			displayNameMustBeString: index => `Author alias group ${index} displayName must be a non-empty string.`,
@@ -473,6 +475,7 @@ Examples:
 			jsonFormatError: filePath => `Git Insight 配置 JSON 格式错误：${filePath}`,
 			mustBeObject: 'Git Insight 配置必须是对象。',
 			invalidLanguage: language => `Git Insight 配置 language 必须是 "en" 或 "zh"，当前值：${language}`,
+			excludePatternsMustBeStringArray: 'Git Insight 配置 excludePatterns 必须是字符串数组。',
 			authorsMustBeArray: '作者合并配置必须包含 authors 数组。',
 			authorGroupMustBeObject: index => `第 ${index} 个作者合并配置必须是对象。`,
 			displayNameMustBeString: index => `第 ${index} 个作者合并配置的 displayName 必须是非空字符串。`,
