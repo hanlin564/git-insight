@@ -7,6 +7,7 @@
     "git-insight": "dist/index.js"
   },
   "scripts": {
+    "setup": "npm install && npm run build && npm link",
     "dev": "tsx src/index.tsx",
     "test": "node test/run-tests.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', {recursive: true, force: true})\"",

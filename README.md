@@ -1,6 +1,30 @@
 # Git Insight
 
+> 本项目由 vibe coding 编写。
+
 Git Insight 是一个 TypeScript ESM 终端 Git 分析 CLI。运行入口、Git 数据采集、统计分析和 Ink/React UI 分层放置，编译产物输出到 `dist/`。
+
+## 快速开始
+
+下载项目后，在项目根目录执行：
+
+```bash
+npm run setup
+```
+
+该脚本会依次完成依赖安装、项目构建和本地全局链接，等价于执行 `npm install`、`npm run build`、`npm link`。
+
+完成后即可在任意 Git 仓库中运行：
+
+```bash
+git-insight
+```
+
+也可以通过 `--repo` 指定要分析的仓库：
+
+```bash
+git-insight --repo /path/to/repo
+```
 
 用户命令、示例和 `.git-insight.json` 配置说明见：
 
