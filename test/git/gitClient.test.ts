@@ -5,7 +5,7 @@ import {parseGitLogWithNumstat} from '../../src/git/gitLogParser.js';
 import type {DateRange} from '../../src/utils/date.js';
 import {createTempGitRepository} from '../helpers/tempGitRepository.js';
 
-test('getLogWithNumstat 读取真实仓库中的新增、修改和删除行统计', async t => {
+test('getLogWithNumstat 读取临时仓库中的新增、修改和删除行统计', async t => {
 	const repo = await createTempGitRepository(t);
 	await repo.commitFile({
 		date: '2025-04-01',

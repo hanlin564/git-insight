@@ -102,7 +102,7 @@ npm run build
 | 将二进制文件 numstat 计为 0 | `parseGitLogWithNumstat` | numstat 中 additions/deletions 为 `-`。 | additions、deletions 和文件级 changedLines 都为 `0`。 |
 | 兼容 CRLF 换行输出 | `parseGitLogWithNumstat` | 构造使用 Windows CRLF 换行的 Git log 文本。 | 日期字段不带 `\r`，numstat 仍能正确累加。 |
 | 忽略空输出和异常 header | `parseGitLogWithNumstat` | 输入空字符串或字段不完整的 commit header。 | 返回空数组，不产生脏数据。 |
-| 读取真实仓库中的新增、修改和删除行统计 | `getLogWithNumstat` + `parseGitLogWithNumstat` | 临时仓库依次新增文件、减少内容、删除文件。 | 解析出 3 个提交，总新增行数为 3，总删除行数为 3。 |
+| 读取临时仓库中的新增、修改和删除行统计 | `getLogWithNumstat` + `parseGitLogWithNumstat` | 临时仓库依次新增文件、减少内容、删除文件。 | 解析出 3 个提交，总新增行数为 3，总删除行数为 3。 |
 
 ## 作者合并与统计单测
 

@@ -112,17 +112,9 @@ CLI 运行应复用 `test/helpers/cli.ts`，避免被本机全局 Git 配置或�
 
 ## 手动验证仓库
 
-需要手动验证 CLI 行为时，优先使用：
+需要手动验证 CLI 行为时，优先使用临时 Git 仓库或通过 `--repo` 指定你本机可访问的任意测试仓库。
 
-```text
-/Users/wanghanlin/MyCodes/workingCodes/Echo
-```
-
-需要验证多提交者、长期未维护老仓库等场景时，使用：
-
-```text
-/Users/wanghanlin/MyCodes/workingCodes/Erp
-```
+验证多提交者、长期未维护老仓库等场景时，应使用可复现的临时仓库脚本或在说明中记录仓库构造方式，避免依赖特定开发者机器上的固定路径。
 
 ## 提交规范
 
