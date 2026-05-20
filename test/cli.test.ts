@@ -532,6 +532,74 @@ test('空仓库会输出无提交数据提示', async t => {
 	assert.doesNotMatch(result.output, /Ranking/);
 });
 
+test('支持 --json 输出稳定摘要', async t => {
+	const repo = await createRepositoryWithHistory(t);
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		repo.path,
+		'--month',
+		'2025-04',
+		'--json'
+	]);
+
+	assert.equal(result.exitCode, 0, result.output);
+	assert.doesNotMatch(result.output, /Git Insight/);
+	assert.doesNotMatch(result.output, /\u001B\[/);
+	assert.match(result.output, /^\{\n  "ok": true,/);
+	assert.doesNotMatch(result.output, /^\t/m);
+
+	const report = JSON.parse(result.output);
+	assert.equal(report.ok, true);
+	assert.equal(report.repository.name, repo.name);
+	assert.equal(report.repository.path, await realpath(repo.path));
+	assert.equal(report.branches.current, 'main');
+	assert.equal(report.branches.analysis, 'main');
+	assert.equal(report.range.kind, 'month');
+	assert.equal(report.range.label, '2025-04');
+	assert.equal(report.range.startDate, '2025-04-01');
+	assert.equal(report.range.endDate, '2025-04-30');
+	assert.equal(report.filters.author, null);
+	assert.equal(report.filters.me, false);
+	assert.equal(report.filters.currentGitUser, null);
+	assert.equal(report.totals.commitCount, 2);
+	assert.equal(report.totals.authorCount, 2);
+	assert.equal(report.totals.changedLines, 3);
+	assert.equal(report.authors.all.length, 2);
+	assert.deepEqual(
+		report.authors.topByCommits.map((author: {authorName: string}) => author.authorName).sort(),
+		['Alice', 'Bob']
+	);
+	assert.equal(report.authors.topByChangedLines[0].authorName, 'Bob');
+	assert.equal(report.fileHotspots.topFiles[0].label, 'src/b.txt');
+	assert.equal(report.heatmap.granularity, 'daily');
+	assert.equal(report.branchGroups.defaultBranch.branchName, 'main');
+	assert.ok(Array.isArray(report.branchGroups.active));
+	assert.ok(Array.isArray(report.branchGroups.stale));
+	assert.equal(report.commits, undefined);
+});
+
+test('--json 分析非 Git 目录时输出结构化错误', async t => {
+	const dirPath = await mkdtemp(path.join(tmpdir(), 'git-insight-json-error-'));
+	t.after(async () => {
+		await rm(dirPath, {recursive: true, force: true});
+	});
+
+	const result = await runGitInsight(t, [
+		'--repo',
+		dirPath,
+		'--json'
+	]);
+
+	assert.equal(result.exitCode, 1, result.output);
+
+	const report = JSON.parse(result.output);
+	assert.equal(report.ok, false);
+	assert.match(report.error, /Not a Git repository/);
+	assert.equal(report.repositoryPath, dirPath);
+	assert.equal(report.generatedAt, undefined);
+});
+
 test('支持 --html 按指定路径生成英文报告', async t => {
 	const repo = await createRepositoryWithHistory(t);
 	const outputDir = await mkdtemp(path.join(tmpdir(), 'git-insight-html-'));

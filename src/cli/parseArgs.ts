@@ -24,6 +24,7 @@ export type CliOptions = {
 	author?: string;
 	me: boolean;
 	html: boolean;
+	json: boolean;
 	outputPath?: string;
 	language: SupportedLanguage;
 };
@@ -252,6 +253,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		.option('--author <query>', t.cli.options.author)
 		.option('--me', t.cli.options.me)
 		.option('--html', t.cli.options.html)
+		.option('--json', t.cli.options.json)
 		.option('--path <file>', t.cli.options.path)
 		.addHelpText('after', t.cli.helpText(MAX_SINCE_DAYS));
 
@@ -261,6 +263,14 @@ export function parseArgs(argv = process.argv): CliOptions {
 		throw new Error(t.cli.errors.authorMeConflict);
 	}
 
+	if (values.html && values.json) {
+		throw new Error(t.cli.errors.htmlJsonConflict);
+	}
+
+	if (values.json && values.path !== undefined) {
+		throw new Error(t.cli.errors.jsonPathConflict);
+	}
+
 	return {
 		repo: path.resolve(String(values.repo)),
 		rangeRequest: parseRangeRequest(values, language),
@@ -268,6 +278,7 @@ export function parseArgs(argv = process.argv): CliOptions {
 		author: values.author,
 		me: values.me === true,
 		html: values.html === true,
+		json: values.json === true,
 		outputPath: values.path === undefined ? undefined : path.resolve(String(values.path)),
 		language
 	};

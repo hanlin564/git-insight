@@ -17,6 +17,7 @@ type CliMessages = {
 		author: string;
 		me: string;
 		html: string;
+		json: string;
 		path: string;
 	};
 	helpText: (maxSinceDays: number) => string;
@@ -47,6 +48,8 @@ type CliMessages = {
 		invalidDate: (optionName: string) => string;
 		dateFormat: (optionName: string) => string;
 		authorMeConflict: string;
+		htmlJsonConflict: string;
+		jsonPathConflict: string;
 	};
 	commanderError: (value: string) => string;
 };
@@ -177,6 +180,7 @@ export const messages: Record<SupportedLanguage, Messages> = {
 				author: 'Only show authors matching the name or email query',
 				me: 'Focus on the current Git configured user and ranking',
 				html: 'Write a static HTML report instead of rendering the terminal UI',
+				json: 'Write a stable JSON summary to stdout instead of rendering the terminal UI',
 				path: 'HTML report output file, defaults to git-insight-report.html in the repository root'
 			},
 			helpText: maxSinceDays => `
@@ -207,6 +211,7 @@ Examples:
   git-insight --repo /path/to/repo --from 2025-04-01 --to 2025-04-20
   git-insight --repo /path/to/repo --branch main --author alice
   git-insight --repo /path/to/repo --me
+  git-insight --repo /path/to/repo --json
   git-insight --repo /path/to/repo --html --path /path/to/report.html
 `,
 			helpHeaders: {
@@ -235,7 +240,9 @@ Examples:
 				monthOutOfRange: optionName => `${optionName} month must be between 01 and 12.`,
 				invalidDate: optionName => `${optionName} must be an existing date.`,
 				dateFormat: optionName => `${optionName} must use yyyy, yyyy-MM, or yyyy-MM-dd format.`,
-				authorMeConflict: 'Specify only one of --author and --me.'
+				authorMeConflict: 'Specify only one of --author and --me.',
+				htmlJsonConflict: 'Specify only one of --html and --json.',
+				jsonPathConflict: '--path can only be used with --html.'
 			},
 			commanderError: value => value
 		},
@@ -351,6 +358,7 @@ Examples:
 				author: '只展示匹配作者名称或邮箱的数据',
 				me: '聚焦当前 Git 配置用户的数据和排名',
 				html: '生成静态 HTML 报告，不渲染终端界面',
+				json: '输出稳定的 JSON 摘要到 stdout，不渲染终端界面',
 				path: 'HTML 报告输出文件，默认生成到仓库根目录的 git-insight-report.html'
 			},
 			helpText: maxSinceDays => `
@@ -381,6 +389,7 @@ Examples:
   git-insight --repo /path/to/repo --from 2025-04-01 --to 2025-04-20
   git-insight --repo /path/to/repo --branch main --author alice
   git-insight --repo /path/to/repo --me
+  git-insight --repo /path/to/repo --json
   git-insight --repo /path/to/repo --html --path /path/to/report.html
 `,
 			helpHeaders: {
@@ -409,7 +418,9 @@ Examples:
 				monthOutOfRange: optionName => `${optionName} 的月份必须在 01 到 12 之间。`,
 				invalidDate: optionName => `${optionName} 必须是存在的日期。`,
 				dateFormat: optionName => `${optionName} 必须是 yyyy、yyyy-MM 或 yyyy-MM-dd 格式。`,
-				authorMeConflict: '--author 和 --me 只能指定一个。'
+				authorMeConflict: '--author 和 --me 只能指定一个。',
+				htmlJsonConflict: '--html 和 --json 只能指定一个。',
+				jsonPathConflict: '--path 只能和 --html 一起使用。'
 			},
 			commanderError: value => value
 				.replace(/^error: unknown option '([^']+)'/m, '错误：未知选项 \'$1\'')

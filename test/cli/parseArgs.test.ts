@@ -11,6 +11,7 @@ test('parseArgs 使用默认范围', () => {
 	assert.equal(options.rangeRequest.kind, 'fixed');
 	assert.equal(options.me, false);
 	assert.equal(options.html, false);
+	assert.equal(options.json, false);
 	assert.equal(options.language, 'en');
 	assert.equal(options.rangeRequest.range.kind, 'since');
 	assert.equal(options.rangeRequest.range.label, 'Last 365 days');
@@ -58,7 +59,16 @@ test('parseArgs 解析 HTML 输出参数', () => {
 	const options = parseArgs(argv('--html', '--path', 'report.html'));
 
 	assert.equal(options.html, true);
+	assert.equal(options.json, false);
 	assert.equal(options.outputPath, path.resolve('report.html'));
+});
+
+test('parseArgs 解析 JSON 输出参数', () => {
+	const options = parseArgs(argv('--json'));
+
+	assert.equal(options.json, true);
+	assert.equal(options.html, false);
+	assert.equal(options.outputPath, undefined);
 });
 
 test('parseArgs 拒绝非法日期和互斥参数', () => {
@@ -70,6 +80,8 @@ test('parseArgs 拒绝非法日期和互斥参数', () => {
 	assert.throws(() => parseArgs(argv('--month', '2025-04', '--from', '2025-04-01')), /--from\/--to cannot be used with --last, --year, or --month/);
 	assert.throws(() => parseArgs(argv('--from', '2025', '--to', '2025-04')), /--from and --to must use the same format/);
 	assert.throws(() => parseArgs(argv('--author', 'alice', '--me')), /Specify only one of --author and --me/);
+	assert.throws(() => parseArgs(argv('--html', '--json')), /Specify only one of --html and --json/);
+	assert.throws(() => parseArgs(argv('--json', '--path', 'report.json')), /--path can only be used with --html/);
 });
 
 test('createCustomDateRange 处理自定义范围边界', () => {

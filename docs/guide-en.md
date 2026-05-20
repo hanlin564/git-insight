@@ -36,6 +36,7 @@ By default, Git Insight analyzes the current directory, the current branch, and 
 | `--author <query>` | Only show data for authors matching the name or email query. |
 | `--me` | Focus on the current Git configured user and show that user's ranking position. |
 | `--html` | Write a static HTML report instead of rendering the terminal UI. |
+| `--json` | Write a stable JSON summary to stdout instead of rendering the terminal UI. |
 | `--path <file>` | HTML report output path. Defaults to `git-insight-report.html` in the repository root. |
 | `-h, --help` | Show help. |
 
@@ -122,6 +123,12 @@ Only show the current Git configured user:
 
 ```bash
 git-insight --repo /path/to/repo --me
+```
+
+Write a JSON summary:
+
+```bash
+git-insight --repo /path/to/repo --month 2025-04 --json
 ```
 
 Write an HTML report to the default path:

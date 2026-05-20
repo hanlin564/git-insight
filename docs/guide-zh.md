@@ -36,6 +36,7 @@ git-insight --help
 | `--author <query>` | 只展示匹配作者名称或邮箱的数据。 |
 | `--me` | 聚焦当前 Git 配置用户，并在排行榜中展示该用户的位置。 |
 | `--html` | 生成静态 HTML 报告，而不是显示终端界面。 |
+| `--json` | 输出稳定的 JSON 摘要到 stdout，而不是显示终端界面。 |
 | `--path <file>` | 指定 HTML 报告输出路径；未指定时生成到仓库根目录的 `git-insight-report.html`。 |
 | `-h, --help` | 显示帮助。 |
 
@@ -122,6 +123,12 @@ git-insight --repo /path/to/repo --author alice
 
 ```bash
 git-insight --repo /path/to/repo --me
+```
+
+输出 JSON 摘要：
+
+```bash
+git-insight --repo /path/to/repo --month 2025-04 --json
 ```
 
 生成 HTML 报告到默认位置：

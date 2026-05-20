@@ -6,6 +6,7 @@ import {collectRepositoryStats} from './analysis/collectRepositoryStats.js';
 import {App} from './ui/App.js';
 import {DEFAULT_LANGUAGE, getMessages, type SupportedLanguage} from './i18n.js';
 import {writeHtmlReport} from './html/generateHtmlReport.js';
+import {formatJsonReport} from './output/jsonReport.js';
 
 async function main() {
 	let language: SupportedLanguage = DEFAULT_LANGUAGE;
@@ -18,12 +19,22 @@ async function main() {
 
 		if (!result.ok) {
 			process.exitCode = 1;
+			if (options.json) {
+				process.stdout.write(formatJsonReport(result, options));
+				return;
+			}
+
 			if (options.html) {
 				const t = getMessages(language);
 				console.error(result.error);
 				console.error(t.ui.checkInputHint);
 				return;
 			}
+		}
+
+		if (options.json) {
+			process.stdout.write(formatJsonReport(result, options));
+			return;
 		}
 
 		if (options.html) {
