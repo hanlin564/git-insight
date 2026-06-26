@@ -1,46 +1,35 @@
-import {strict as assert} from 'node:assert';
 import test from 'node:test';
-import {
-	buildDailyHeatmapLayout,
-	buildMonthLabels,
-	buildWeeks,
-	getDailyHeatmapLayoutWidth
-} from '../../src/ui/components/ContributionHeatmap.js';
-import {getDateRangeBetween} from '../../src/utils/date.js';
+import assert from 'node:assert/strict';
+import {WEEKDAY_ROW_INDEXES, buildMonthLabels, buildDailyHeatmapLayout, buildWeeks} from '../../src/ui/components/ContributionHeatmap.js';
 import type {HeatmapPeriodCount} from '../../src/git/types.js';
 
-test('daily 热力图同月内周列不增加额外间距', () => {
-	const weeks = buildWeeks(periodsBetween('2025-01-06', '2025-01-26'));
-	const layout = buildDailyHeatmapLayout(weeks);
-	const labels = buildMonthLabels(layout);
-
-	assert.equal(getDailyHeatmapLayoutWidth(layout), weeks.length * 2);
-	assert.equal(labels.length, getDailyHeatmapLayoutWidth(layout));
-	assert.equal(labels.indexOf('Jan'), 0);
+test('年度热力图渲染 7 行无左侧星期标签数据', () => {
+	assert.deepEqual(WEEKDAY_ROW_INDEXES, [0, 1, 2, 3, 4, 5, 6]);
 });
 
-test('daily 热力图不同月份边界增加额外间距', () => {
-	const weeks = buildWeeks(periodsBetween('2025-01-01', '2025-04-30'));
-	const layout = buildDailyHeatmapLayout(weeks);
-	const labels = buildMonthLabels(layout);
+test('buildWeeks 保留一周内 7 天数据', () => {
+	const periods: HeatmapPeriodCount[] = [
+		{period: '2026-01-05', count: 1},
+		{period: '2026-01-06', count: 2},
+		{period: '2026-01-07', count: 3},
+		{period: '2026-01-08', count: 4},
+		{period: '2026-01-09', count: 5},
+		{period: '2026-01-10', count: 6},
+		{period: '2026-01-11', count: 7}
+	];
 
-	assert.equal(getDailyHeatmapLayoutWidth(layout), weeks.length * 2 + 3);
-	assert.equal(labels.length, getDailyHeatmapLayoutWidth(layout));
-	assert.equal(labels.indexOf('Jan'), 0);
-	assert.notEqual(labels.indexOf('Feb'), -1);
-	assert.notEqual(labels.indexOf('Mar'), -1);
-	assert.notEqual(labels.indexOf('Apr'), -1);
+	const weeks = buildWeeks(periods);
+
+	assert.equal(weeks.length, 1);
+	assert.deepEqual(weeks[0]?.map(period => period?.period), periods.map(period => period.period));
 });
 
-test('daily 热力图跨月周使用新月份标记', () => {
-	const weeks = buildWeeks(periodsBetween('2025-02-24', '2025-03-09'));
-	const layout = buildDailyHeatmapLayout(weeks);
-	const labels = buildMonthLabels(layout);
+test('月份标签使用紧凑数字并且不保留左侧星期标签缩进', () => {
+	const periods: HeatmapPeriodCount[] = [
+		{period: '2026-01-05', count: 0}
+	];
+	const labels = buildMonthLabels(buildDailyHeatmapLayout(buildWeeks(periods)));
 
-	assert.equal(labels.length, getDailyHeatmapLayoutWidth(layout));
-	assert.equal(labels.indexOf('Mar'), 0);
+	assert.match(labels, /^1/);
+	assert.doesNotMatch(labels, /月/);
 });
-
-function periodsBetween(startDate: string, endDate: string): HeatmapPeriodCount[] {
-	return getDateRangeBetween(startDate, endDate).map(period => ({period, count: 0}));
-}

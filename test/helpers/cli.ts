@@ -14,7 +14,11 @@ export type CliRunResult = {
 };
 
 type RunGitInsightOptions = {
-	homeConfig?: string;
+	cwd?: string;
+	globalUser?: {
+		name?: string;
+		email?: string;
+	};
 };
 
 export async function runGitInsight(
@@ -22,18 +26,26 @@ export async function runGitInsight(
 	args: string[],
 	options: RunGitInsightOptions = {}
 ): Promise<CliRunResult> {
-	const homePath = await mkdtemp(path.join(os.tmpdir(), 'git-insight-home-'));
+	const homePath = await mkdtemp(path.join(os.tmpdir(), 'show-my-git-data-home-'));
 	const xdgConfigHomePath = path.join(homePath, '.config');
 	t.after(async () => {
 		await rm(homePath, {recursive: true, force: true});
 	});
 
-	if (options.homeConfig !== undefined) {
-		await writeFile(path.join(homePath, '.git-insight.json'), options.homeConfig, 'utf8');
+	if (options.globalUser) {
+		await writeFile(
+			path.join(homePath, '.gitconfig'),
+			[
+				'[user]',
+				...(options.globalUser.name ? [`\tname = ${options.globalUser.name}`] : []),
+				...(options.globalUser.email ? [`\temail = ${options.globalUser.email}`] : [])
+			].join('\n') + '\n',
+			'utf8'
+		);
 	}
 
 	const result = await execa(process.execPath, [cliEntry, ...args], {
-		cwd: projectRoot,
+		cwd: options.cwd ?? projectRoot,
 		extendEnv: false,
 		reject: false,
 		env: {

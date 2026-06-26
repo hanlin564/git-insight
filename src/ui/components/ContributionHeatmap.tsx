@@ -1,16 +1,13 @@
 import React from 'react';
 import {Box, Text} from 'ink';
 import type {HeatmapPeriodCount} from '../../git/types.js';
-import type {ContributionHeatmapStat} from '../../analysis/heatmapStats.js';
-import {DEFAULT_LANGUAGE, getMessages, type SupportedLanguage} from '../../i18n.js';
 import {getMondayFirstWeekday} from '../../utils/date.js';
 
 type ContributionHeatmapProps = {
-	heatmap: ContributionHeatmapStat;
-	language: SupportedLanguage;
+	heatmap: HeatmapPeriodCount[];
 };
 
-export type WeekColumn = Array<HeatmapPeriodCount | undefined>;
+type WeekColumn = Array<HeatmapPeriodCount | undefined>;
 
 type DailyHeatmapColumn = {
 	week: WeekColumn;
@@ -18,37 +15,26 @@ type DailyHeatmapColumn = {
 	monthLabel?: string;
 };
 
-type YearRow = {
-	year: string;
-	months: Array<HeatmapPeriodCount | undefined>;
-};
-
 const COLORS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
+const MONTHS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const DAILY_WEEK_COLUMN_WIDTH = 2;
 
-export function ContributionHeatmap({heatmap, language}: ContributionHeatmapProps) {
-	if (heatmap.granularity === 'monthly') {
-		return <MonthlyHeatmap heatmap={heatmap} language={language} />;
-	}
+export const WEEKDAY_ROW_INDEXES = [0, 1, 2, 3, 4, 5, 6];
 
-	return <DailyHeatmap heatmap={heatmap} language={language} />;
-}
-
-function DailyHeatmap({heatmap, language}: ContributionHeatmapProps) {
-	const t = getMessages(language).ui;
-	const weeks = buildWeeks(heatmap.periods);
-	const layout = buildDailyHeatmapLayout(weeks, language);
+export function ContributionHeatmap({heatmap}: ContributionHeatmapProps) {
+	const weeks = buildWeeks(heatmap);
+	const layout = buildDailyHeatmapLayout(weeks);
 	const monthLabels = buildMonthLabels(layout);
 
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
-			<Legend language={language} />
-			<Text color="gray">      {monthLabels}</Text>
-			{t.weekdays.map((label, rowIndex) => (
-				<Text key={label}>
-					<Text color="gray">{label}  </Text>
+			<Text color="cyan" bold>本年度个人提交热力图</Text>
+			<Legend />
+			<Text color="gray">{monthLabels}</Text>
+			{WEEKDAY_ROW_INDEXES.map(rowIndex => (
+				<Text key={rowIndex}>
 					{layout.map((column, weekIndex) => (
-						<React.Fragment key={`${label}-${weekIndex}`}>
+						<React.Fragment key={`${rowIndex}-${weekIndex}`}>
 							{column.prefix && <Text>{column.prefix}</Text>}
 							<Text color={getDailyColor(column.week[rowIndex]?.count ?? 0)}>■ </Text>
 						</React.Fragment>
@@ -59,37 +45,12 @@ function DailyHeatmap({heatmap, language}: ContributionHeatmapProps) {
 	);
 }
 
-function MonthlyHeatmap({heatmap, language}: ContributionHeatmapProps) {
-	const t = getMessages(language).ui;
-	const rows = buildYearRows(heatmap.periods);
-
-	return (
-		<Box flexDirection="column" marginTop={1} marginBottom={1}>
-			<Legend language={language} />
-			<Text color="gray">{t.monthlyView}</Text>
-			<Text color="gray">      {t.months.map(label => label.padEnd(4, ' ')).join('')}</Text>
-			{rows.map(row => (
-				<Text key={row.year}>
-					<Text color="gray">{row.year}  </Text>
-					{row.months.map((month, monthIndex) => (
-						<Text key={`${row.year}-${monthIndex}`} color={getMonthlyColor(month?.count ?? 0)}>
-							{month ? '■   ' : '    '}
-						</Text>
-					))}
-				</Text>
-			))}
-		</Box>
-	);
-}
-
-function Legend({language}: {language: SupportedLanguage}) {
-	const t = getMessages(language).ui;
-
+function Legend() {
 	return (
 		<Text>
-			<Text color="gray">{t.less} </Text>
+			<Text color="gray">少 </Text>
 			{COLORS.map(color => <Text key={color} color={color}>■ </Text>)}
-			<Text color="gray">{t.more}</Text>
+			<Text color="gray">多</Text>
 		</Text>
 	);
 }
@@ -121,10 +82,7 @@ export function buildWeeks(periods: HeatmapPeriodCount[]): WeekColumn[] {
 	return weeks;
 }
 
-export function buildDailyHeatmapLayout(
-	weeks: WeekColumn[],
-	language: SupportedLanguage = DEFAULT_LANGUAGE
-): DailyHeatmapColumn[] {
+export function buildDailyHeatmapLayout(weeks: WeekColumn[]): DailyHeatmapColumn[] {
 	let previousMonth = '';
 
 	return weeks.map(week => {
@@ -139,7 +97,7 @@ export function buildDailyHeatmapLayout(
 		}
 
 		previousMonth = getMonthKey(firstNewMonthPeriod.period);
-		column.monthLabel = getLocalizedMonthLabel(firstNewMonthPeriod.period, language);
+		column.monthLabel = getMonthLabel(firstNewMonthPeriod.period);
 		return column;
 	});
 }
@@ -163,7 +121,7 @@ export function buildMonthLabels(layout: DailyHeatmapColumn[]): string {
 	return labels.join('');
 }
 
-export function getDailyHeatmapLayoutWidth(layout: DailyHeatmapColumn[]): number {
+function getDailyHeatmapLayoutWidth(layout: DailyHeatmapColumn[]): number {
 	return layout.reduce(
 		(width, column) => width + column.prefix.length + DAILY_WEEK_COLUMN_WIDTH,
 		0
@@ -197,28 +155,9 @@ function getMonthKey(dateText: string): string {
 	return dateText.slice(0, 7);
 }
 
-function getLocalizedMonthLabel(dateText: string, language: SupportedLanguage): string {
+function getMonthLabel(dateText: string): string {
 	const monthIndex = Number.parseInt(dateText.slice(5, 7), 10) - 1;
-	return getMessages(language).ui.months[monthIndex] ?? dateText.slice(5, 7);
-}
-
-function buildYearRows(periods: HeatmapPeriodCount[]): YearRow[] {
-	const rows = new Map<string, YearRow>();
-
-	for (const period of periods) {
-		const [year, month] = period.period.split('-');
-		const monthIndex = Number.parseInt(month ?? '', 10) - 1;
-
-		if (!year || monthIndex < 0 || monthIndex > 11) {
-			continue;
-		}
-
-		const row = rows.get(year) ?? {year, months: Array.from({length: 12})};
-		row.months[monthIndex] = period;
-		rows.set(year, row);
-	}
-
-	return [...rows.values()];
+	return MONTHS[monthIndex] ?? dateText.slice(5, 7);
 }
 
 function getDailyColor(count: number): string {
@@ -235,26 +174,6 @@ function getDailyColor(count: number): string {
 	}
 
 	if (count <= 6) {
-		return COLORS[3];
-	}
-
-	return COLORS[4];
-}
-
-function getMonthlyColor(count: number): string {
-	if (count === 0) {
-		return COLORS[0];
-	}
-
-	if (count <= 2) {
-		return COLORS[1];
-	}
-
-	if (count <= 5) {
-		return COLORS[2];
-	}
-
-	if (count <= 10) {
 		return COLORS[3];
 	}
 

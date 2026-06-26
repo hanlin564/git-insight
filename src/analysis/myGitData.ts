@@ -1,0 +1,191 @@
+import path from 'node:path';
+import type {CommitRecord, GitUserIdentity, HeatmapPeriodCount} from '../git/types.js';
+import {discoverGitRepositories} from '../git/repositoryDiscovery.js';
+import {getGlobalGitUser, getRepositoryCommits, GitGlobalUserError} from '../git/gitClient.js';
+import {addDays, formatDate, getDateRangeBetween, startOfLocalDay} from '../utils/date.js';
+
+export type ProgressSnapshot =
+	| {
+		phase: 'scanning';
+		scannedDirectories?: number;
+		repositoryCount: number;
+		currentPath?: string;
+	}
+	| {
+		phase: 'analyzing';
+		completedRepositories: number;
+		totalRepositories: number;
+		currentRepository?: string;
+	};
+
+export type PeriodSummary = {
+	label: string;
+	commitCount: number;
+	changedLines: number;
+};
+
+export type FailedRepository = {
+	path: string;
+	error: string;
+};
+
+export type MyGitData = {
+	rootPath: string;
+	user: GitUserIdentity;
+	year: number;
+	repositoryCount: number;
+	successfulRepositoryCount: number;
+	failedRepositories: FailedRepository[];
+	heatmap: HeatmapPeriodCount[];
+	summaries: {
+		today: PeriodSummary;
+		last7Days: PeriodSummary;
+		last30Days: PeriodSummary;
+	};
+};
+
+export type MyGitDataResult =
+	| {ok: true; data: MyGitData}
+	| {ok: false; error: string};
+
+type CollectionWindow = {
+	year: number;
+	today: string;
+	yearStart: string;
+	yearEnd: string;
+	logStart: string;
+	last7Start: string;
+	last30Start: string;
+};
+
+export async function collectMyGitData(
+	rootPath: string,
+	onProgress?: (progress: ProgressSnapshot) => void,
+	now = new Date()
+): Promise<MyGitDataResult> {
+	const resolvedRootPath = path.resolve(rootPath);
+	const window = createCollectionWindow(now);
+
+	try {
+		const user = await getGlobalGitUser(resolvedRootPath);
+		const repositories = await discoverGitRepositories(resolvedRootPath, onProgress);
+		const failedRepositories: FailedRepository[] = [];
+		const commits: CommitRecord[] = [];
+
+		for (const [index, repositoryPath] of repositories.entries()) {
+			onProgress?.({
+				phase: 'analyzing',
+				completedRepositories: index,
+				totalRepositories: repositories.length,
+				currentRepository: repositoryPath
+			});
+
+			try {
+				const repositoryCommits = await getRepositoryCommits(repositoryPath, window.logStart, window.today);
+				commits.push(...repositoryCommits.filter(commit => isCurrentUserCommit(commit, user)));
+			} catch (error) {
+				failedRepositories.push({
+					path: repositoryPath,
+					error: error instanceof Error ? error.message : String(error)
+				});
+			}
+
+			onProgress?.({
+				phase: 'analyzing',
+				completedRepositories: index + 1,
+				totalRepositories: repositories.length,
+				currentRepository: repositoryPath
+			});
+		}
+
+		return {
+			ok: true,
+			data: {
+				rootPath: resolvedRootPath,
+				user,
+				year: window.year,
+				repositoryCount: repositories.length,
+				successfulRepositoryCount: repositories.length - failedRepositories.length,
+				failedRepositories,
+				heatmap: collectYearHeatmap(commits, window),
+				summaries: {
+					today: summarizePeriod('今天', commits, window.today, window.today),
+					last7Days: summarizePeriod('过去 7 天', commits, window.last7Start, window.today),
+					last30Days: summarizePeriod('过去 30 天', commits, window.last30Start, window.today)
+				}
+			}
+		};
+	} catch (error) {
+		if (error instanceof GitGlobalUserError) {
+			return {ok: false, error: error.message};
+		}
+
+		throw error;
+	}
+}
+
+function createCollectionWindow(now: Date): CollectionWindow {
+	const todayDate = startOfLocalDay(now);
+	const year = todayDate.getFullYear();
+	const today = formatDate(todayDate);
+	const yearStart = `${year}-01-01`;
+	const yearEnd = `${year}-12-31`;
+	const last7Start = formatDate(addDays(todayDate, -6));
+	const last30Start = formatDate(addDays(todayDate, -29));
+	const logStart = last30Start < yearStart ? last30Start : yearStart;
+
+	return {
+		year,
+		today,
+		yearStart,
+		yearEnd,
+		logStart,
+		last7Start,
+		last30Start
+	};
+}
+
+function isCurrentUserCommit(commit: CommitRecord, user: GitUserIdentity): boolean {
+	return Boolean(
+		user.name && commit.authorName === user.name
+		|| user.email && commit.authorEmail.toLowerCase() === user.email.toLowerCase()
+	);
+}
+
+function collectYearHeatmap(commits: CommitRecord[], window: CollectionWindow): HeatmapPeriodCount[] {
+	const periods = new Map(
+		getDateRangeBetween(window.yearStart, window.yearEnd).map(period => [period, {period, count: 0}])
+	);
+
+	for (const commit of commits) {
+		const period = periods.get(commit.date);
+		if (period) {
+			period.count += 1;
+		}
+	}
+
+	return [...periods.values()];
+}
+
+function summarizePeriod(
+	label: string,
+	commits: CommitRecord[],
+	startDate: string,
+	endDate: string
+): PeriodSummary {
+	return commits.reduce<PeriodSummary>((summary, commit) => {
+		if (commit.date < startDate || commit.date > endDate) {
+			return summary;
+		}
+
+		return {
+			label,
+			commitCount: summary.commitCount + 1,
+			changedLines: summary.changedLines + commit.additions + commit.deletions
+		};
+	}, {
+		label,
+		commitCount: 0,
+		changedLines: 0
+	});
+}

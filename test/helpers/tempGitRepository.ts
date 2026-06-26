@@ -1,4 +1,4 @@
-import {appendFile, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
+import {appendFile, mkdtemp, readFile, rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {execa} from 'execa';
@@ -16,6 +16,7 @@ type CommitOptions = {
 type CreateTempGitRepositoryOptions = {
 	configureUser?: boolean;
 	namePrefix?: string;
+	parentDir?: string;
 };
 
 export type TempGitRepository = {
@@ -28,8 +29,6 @@ export type TempGitRepository = {
 	removeFile: (options: Omit<CommitOptions, 'content'>) => Promise<void>;
 	checkout: (branchName: string) => Promise<void>;
 	createBranch: (branchName: string) => Promise<void>;
-	writeConfig: (content: string) => Promise<void>;
-	writeAuthorAliases: (content: string) => Promise<void>;
 };
 
 const DEFAULT_AUTHOR_NAME = 'Alice';
@@ -39,9 +38,9 @@ export async function createTempGitRepository(
 	t: TestContext,
 	options: CreateTempGitRepositoryOptions = {}
 ): Promise<TempGitRepository> {
-	const repoPath = await mkdtemp(path.join(os.tmpdir(), options.namePrefix ?? 'git-insight-test-'));
+	const repoPath = await mkdtemp(path.join(options.parentDir ?? os.tmpdir(), options.namePrefix ?? 'show-my-git-data-test-'));
 	const repoName = path.basename(repoPath);
-	const fastImportMarksPath = path.join(repoPath, '.git-insight-fast-import-marks');
+	const fastImportMarksPath = path.join(repoPath, '.show-my-git-data-fast-import-marks');
 	const branchTips = new Map<string, string | undefined>([['main', undefined]]);
 	let currentBranchName = 'main';
 
@@ -107,12 +106,6 @@ export async function createTempGitRepository(
 			await git(['checkout', '-b', branchName]);
 			branchTips.set(branchName, branchTips.get(currentBranchName));
 			currentBranchName = branchName;
-		},
-		async writeConfig(content: string) {
-			await writeFile(path.join(repoPath, '.git-insight.json'), content, 'utf8');
-		},
-		async writeAuthorAliases(content: string) {
-			await writeFile(path.join(repoPath, '.git-insight.json'), content, 'utf8');
 		}
 	};
 }
