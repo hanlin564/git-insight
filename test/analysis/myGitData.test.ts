@@ -34,11 +34,18 @@ test('跨仓库汇总全局 Git 用户的年度热力图和近期统计', async 
 
 	const firstRepo = await createTempGitRepository(t, {parentDir: rootPath, namePrefix: 'repo-a-'});
 	await firstRepo.commitFile({
-		date: '2025-04-30',
+		date: '2024-04-30',
 		authorName: 'Alice',
 		authorEmail: 'alice@example.com',
-		filePath: 'today.txt',
-		content: 'a\nb\n'
+		filePath: 'before-last-12-months.txt',
+		content: 'ignored\n'
+	});
+	await firstRepo.commitFile({
+		date: '2024-05-01',
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com',
+		filePath: 'last-year.txt',
+		content: 'a\n'
 	});
 	await firstRepo.commitFile({
 		date: '2025-04-29',
@@ -46,6 +53,13 @@ test('跨仓库汇总全局 Git 用户的年度热力图和近期统计', async 
 		authorEmail: 'alice@example.com',
 		filePath: 'week.txt',
 		content: 'a\nb\nc\n'
+	});
+	await firstRepo.commitFile({
+		date: '2025-04-30',
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com',
+		filePath: 'today.txt',
+		content: 'a\nb\n'
 	});
 	await firstRepo.commitFile({
 		date: '2025-04-30',
@@ -81,6 +95,9 @@ test('跨仓库汇总全局 Git 用户的年度热力图和近期统计', async 
 	assert.equal(result.data.summaries.last30Days.changedLines, 6);
 	assert.equal(result.data.heatmap.find(period => period.period === '2025-04-30')?.count, 1);
 	assert.equal(result.data.heatmap.find(period => period.period === '2025-04-10')?.count, 1);
+	assert.equal(result.data.heatmap.find(period => period.period === '2024-05-01'), undefined);
+	assert.equal(result.data.last12MonthsHeatmap.find(period => period.period === '2024-05-01')?.count, 1);
+	assert.equal(result.data.last12MonthsHeatmap.find(period => period.period === '2024-04-30'), undefined);
 });
 
 test('缺少 Git 全局用户时返回可读错误', async t => {

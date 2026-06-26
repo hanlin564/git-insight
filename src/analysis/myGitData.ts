@@ -2,7 +2,7 @@ import path from 'node:path';
 import type {CommitRecord, GitUserIdentity, HeatmapPeriodCount} from '../git/types.js';
 import {discoverGitRepositories} from '../git/repositoryDiscovery.js';
 import {getGlobalGitUser, getRepositoryCommits, GitGlobalUserError} from '../git/gitClient.js';
-import {addDays, formatDate, getDateRangeBetween, startOfLocalDay} from '../utils/date.js';
+import {addDays, addMonths, formatDate, getDateRangeBetween, startOfLocalDay} from '../utils/date.js';
 
 export type ProgressSnapshot =
 	| {
@@ -37,6 +37,7 @@ export type MyGitData = {
 	successfulRepositoryCount: number;
 	failedRepositories: FailedRepository[];
 	heatmap: HeatmapPeriodCount[];
+	last12MonthsHeatmap: HeatmapPeriodCount[];
 	summaries: {
 		today: PeriodSummary;
 		last7Days: PeriodSummary;
@@ -56,6 +57,7 @@ type CollectionWindow = {
 	logStart: string;
 	last7Start: string;
 	last30Start: string;
+	last12MonthsStart: string;
 };
 
 export async function collectMyGitData(
@@ -107,7 +109,8 @@ export async function collectMyGitData(
 				repositoryCount: repositories.length,
 				successfulRepositoryCount: repositories.length - failedRepositories.length,
 				failedRepositories,
-				heatmap: collectYearHeatmap(commits, window),
+				heatmap: collectDailyHeatmap(commits, window.yearStart, window.yearEnd),
+				last12MonthsHeatmap: collectDailyHeatmap(commits, window.last12MonthsStart, window.today),
 				summaries: {
 					today: summarizePeriod('今天', commits, window.today, window.today),
 					last7Days: summarizePeriod('过去 7 天', commits, window.last7Start, window.today),
@@ -132,7 +135,8 @@ function createCollectionWindow(now: Date): CollectionWindow {
 	const yearEnd = `${year}-12-31`;
 	const last7Start = formatDate(addDays(todayDate, -6));
 	const last30Start = formatDate(addDays(todayDate, -29));
-	const logStart = last30Start < yearStart ? last30Start : yearStart;
+	const last12MonthsStart = formatDate(addDays(addMonths(todayDate, -12), 1));
+	const logStart = [yearStart, last30Start, last12MonthsStart].sort()[0] ?? yearStart;
 
 	return {
 		year,
@@ -141,7 +145,8 @@ function createCollectionWindow(now: Date): CollectionWindow {
 		yearEnd,
 		logStart,
 		last7Start,
-		last30Start
+		last30Start,
+		last12MonthsStart
 	};
 }
 
@@ -152,9 +157,9 @@ function isCurrentUserCommit(commit: CommitRecord, user: GitUserIdentity): boole
 	);
 }
 
-function collectYearHeatmap(commits: CommitRecord[], window: CollectionWindow): HeatmapPeriodCount[] {
+function collectDailyHeatmap(commits: CommitRecord[], startDate: string, endDate: string): HeatmapPeriodCount[] {
 	const periods = new Map(
-		getDateRangeBetween(window.yearStart, window.yearEnd).map(period => [period, {period, count: 0}])
+		getDateRangeBetween(startDate, endDate).map(period => [period, {period, count: 0}])
 	);
 
 	for (const commit of commits) {

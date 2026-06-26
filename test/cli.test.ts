@@ -56,7 +56,8 @@ test('show-my-git-data 默认扫描当前目录下多个仓库并只统计全局
 	assert.match(result.output, /show-my-git-data/);
 	assert.match(result.output, /当前用户：Alice <alice@example.com>/);
 	assert.match(result.output, /仓库：成功 2 \/ 共 2/);
-	assert.match(result.output, /本年度个人提交热力图/);
+	assert.match(result.output, new RegExp(`${today.getFullYear()} 年个人提交热力图`));
+	assert.match(result.output, /过去 12 个月个人提交热力图/);
 	assert.match(result.output, /今天：2 次提交，3 行代码/);
 	assert.doesNotMatch(result.output, /Bob/);
 });

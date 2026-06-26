@@ -87,12 +87,12 @@ export function App({rootPath}: AppProps) {
 				仓库：成功 {data.successfulRepositoryCount} / 共 {data.repositoryCount}
 				{data.failedRepositories.length > 0 && <Text color="yellow">，失败 {data.failedRepositories.length}</Text>}
 			</Text>
-			<Text>统计年份：{data.year}</Text>
 			<Text> </Text>
 
 			{data.repositoryCount === 0 && <Text color="yellow">当前目录下未发现 Git 仓库。</Text>}
 
-			<ContributionHeatmap heatmap={data.heatmap} />
+			<ContributionHeatmap heatmap={data.heatmap} title={`${data.year} 年个人提交热力图`} />
+			<ContributionHeatmap heatmap={data.last12MonthsHeatmap} title="过去 12 个月个人提交热力图" />
 
 			<Box flexDirection="column" marginTop={1}>
 				<Text color="cyan" bold>提交概览</Text>

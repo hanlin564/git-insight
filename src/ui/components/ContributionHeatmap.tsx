@@ -5,6 +5,7 @@ import {getMondayFirstWeekday} from '../../utils/date.js';
 
 type ContributionHeatmapProps = {
 	heatmap: HeatmapPeriodCount[];
+	title?: string;
 };
 
 type WeekColumn = Array<HeatmapPeriodCount | undefined>;
@@ -21,14 +22,14 @@ const DAILY_WEEK_COLUMN_WIDTH = 2;
 
 export const WEEKDAY_ROW_INDEXES = [0, 1, 2, 3, 4, 5, 6];
 
-export function ContributionHeatmap({heatmap}: ContributionHeatmapProps) {
+export function ContributionHeatmap({heatmap, title = '本年度个人提交热力图'}: ContributionHeatmapProps) {
 	const weeks = buildWeeks(heatmap);
 	const layout = buildDailyHeatmapLayout(weeks);
 	const monthLabels = buildMonthLabels(layout);
 
 	return (
 		<Box flexDirection="column" marginTop={1} marginBottom={1}>
-			<Text color="cyan" bold>本年度个人提交热力图</Text>
+			<Text color="cyan" bold>{title}</Text>
 			<Legend />
 			<Text color="gray">{monthLabels}</Text>
 			{WEEKDAY_ROW_INDEXES.map(rowIndex => (
