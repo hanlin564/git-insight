@@ -41,3 +41,24 @@ test('识别 .git 文件形式的 worktree 仓库', async t => {
 
 	assert.deepEqual(repositories, [worktreePath]);
 });
+
+test('支持多个扫描目录并去重重复发现的仓库', async t => {
+	const rootPath = await mkdtemp(path.join(os.tmpdir(), 'show-my-git-data-multi-root-'));
+	t.after(async () => {
+		await rm(rootPath, {recursive: true, force: true});
+	});
+
+	const frontendPath = path.join(rootPath, 'frontend');
+	const backendPath = path.join(rootPath, 'backend');
+	await mkdir(frontendPath);
+	await mkdir(backendPath);
+	const frontendRepo = await createTempGitRepository(t, {parentDir: frontendPath, namePrefix: 'repo-web-'});
+	const backendRepo = await createTempGitRepository(t, {parentDir: backendPath, namePrefix: 'repo-api-'});
+
+	const repositories = await discoverGitRepositories([frontendPath, backendPath, frontendRepo.path]);
+
+	assert.deepEqual(
+		repositories.sort(),
+		[frontendRepo.path, backendRepo.path].sort()
+	);
+});

@@ -31,6 +31,7 @@ export type FailedRepository = {
 
 export type MyGitData = {
 	rootPath: string;
+	rootPaths: string[];
 	user: GitUserIdentity;
 	year: number;
 	repositoryCount: number;
@@ -61,16 +62,16 @@ type CollectionWindow = {
 };
 
 export async function collectMyGitData(
-	rootPath: string,
+	rootPaths: string | string[],
 	onProgress?: (progress: ProgressSnapshot) => void,
 	now = new Date()
 ): Promise<MyGitDataResult> {
-	const resolvedRootPath = path.resolve(rootPath);
+	const resolvedRootPaths = normalizeRootPaths(rootPaths);
 	const window = createCollectionWindow(now);
 
 	try {
-		const user = await getGlobalGitUser(resolvedRootPath);
-		const repositories = await discoverGitRepositories(resolvedRootPath, onProgress);
+		const user = await getGlobalGitUser(process.cwd());
+		const repositories = await discoverGitRepositories(resolvedRootPaths, onProgress);
 		const failedRepositories: FailedRepository[] = [];
 		const commits: CommitRecord[] = [];
 
@@ -103,7 +104,8 @@ export async function collectMyGitData(
 		return {
 			ok: true,
 			data: {
-				rootPath: resolvedRootPath,
+				rootPath: resolvedRootPaths[0] ?? process.cwd(),
+				rootPaths: resolvedRootPaths,
 				user,
 				year: window.year,
 				repositoryCount: repositories.length,
@@ -125,6 +127,12 @@ export async function collectMyGitData(
 
 		throw error;
 	}
+}
+
+function normalizeRootPaths(rootPaths: string | string[]): string[] {
+	const paths = Array.isArray(rootPaths) ? rootPaths : [rootPaths];
+	const resolvedPaths = paths.length > 0 ? paths : [process.cwd()];
+	return [...new Set(resolvedPaths.map(rootPath => path.resolve(rootPath)))];
 }
 
 function createCollectionWindow(now: Date): CollectionWindow {

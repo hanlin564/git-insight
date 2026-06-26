@@ -1,4 +1,4 @@
-import {mkdtemp, rm} from 'node:fs/promises';
+import {mkdir, mkdtemp, rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -77,7 +77,7 @@ test('没有发现 Git 仓库时输出空状态', async t => {
 	});
 
 	assert.equal(result.exitCode, 0);
-	assert.match(result.output, /当前目录下未发现 Git 仓库/);
+	assert.match(result.output, /扫描目录下未发现 Git 仓库/);
 	assert.match(result.output, /今天：0 次提交，0 行代码/);
 });
 
@@ -93,9 +93,65 @@ test('缺少 Git 全局用户时返回错误', async t => {
 	assert.match(result.output, /未读取到 Git 全局用户名或邮箱/);
 });
 
-test('传入参数时提示命令无需参数', async t => {
-	const result = await runGitInsight(t, ['--year', '2025']);
+test('支持传入多个相对和绝对扫描目录', async t => {
+	const rootPath = await mkdtemp(path.join(os.tmpdir(), 'show-my-git-data-cli-multi-'));
+	t.after(async () => {
+		await rm(rootPath, {recursive: true, force: true});
+	});
 
-	assert.equal(result.exitCode, 1);
-	assert.match(result.output, /不需要任何参数/);
+	const today = new Date();
+	const todayText = [
+		today.getFullYear(),
+		String(today.getMonth() + 1).padStart(2, '0'),
+		String(today.getDate()).padStart(2, '0')
+	].join('-');
+
+	const frontendPath = path.join(rootPath, 'frontend');
+	const backendPath = path.join(rootPath, 'backend');
+	const ignoredPath = path.join(rootPath, 'practice');
+	await mkdir(frontendPath);
+	await mkdir(backendPath);
+	await mkdir(ignoredPath);
+
+	const frontendRepo = await createTempGitRepository(t, {parentDir: frontendPath, namePrefix: 'repo-web-'});
+	await frontendRepo.commitFile({
+		date: todayText,
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com',
+		filePath: 'frontend.txt',
+		content: 'a\nb\n'
+	});
+
+	const backendRepo = await createTempGitRepository(t, {parentDir: backendPath, namePrefix: 'repo-api-'});
+	await backendRepo.commitFile({
+		date: todayText,
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com',
+		filePath: 'backend.txt',
+		content: 'a\n'
+	});
+
+	const ignoredRepo = await createTempGitRepository(t, {parentDir: ignoredPath, namePrefix: 'repo-practice-'});
+	await ignoredRepo.commitFile({
+		date: todayText,
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com',
+		filePath: 'ignored.txt',
+		content: 'ignored\n'
+	});
+
+	const result = await runGitInsight(t, ['frontend', backendPath], {
+		cwd: rootPath,
+		globalUser: {
+			name: 'Alice',
+			email: 'alice@example.com'
+		}
+	});
+
+	assert.equal(result.exitCode, 0);
+	assert.match(result.output, /扫描目录：2 个/);
+	assert.match(result.output, /frontend/);
+	assert.match(result.output, /backend/);
+	assert.match(result.output, /仓库：成功 2 \/ 共 2/);
+	assert.match(result.output, /今天：2 次提交，3 行代码/);
 });

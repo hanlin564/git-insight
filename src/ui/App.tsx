@@ -6,12 +6,12 @@ import type {GitUserIdentity} from '../git/types.js';
 import {ContributionHeatmap} from './components/ContributionHeatmap.js';
 
 type AppProps = {
-	rootPath: string;
+	rootPaths: string[];
 };
 
 const PROGRESS_BAR_WIDTH = 28;
 
-export function App({rootPath}: AppProps) {
+export function App({rootPaths}: AppProps) {
 	const {exit} = useApp();
 	const [progress, setProgress] = useState<ProgressSnapshot>({
 		phase: 'scanning',
@@ -24,7 +24,7 @@ export function App({rootPath}: AppProps) {
 	useEffect(() => {
 		let isMounted = true;
 
-		void collectMyGitData(rootPath, nextProgress => {
+		void collectMyGitData(rootPaths, nextProgress => {
 			if (isMounted) {
 				setProgress(nextProgress);
 			}
@@ -46,7 +46,7 @@ export function App({rootPath}: AppProps) {
 		return () => {
 			isMounted = false;
 		};
-	}, [rootPath]);
+	}, [rootPaths]);
 
 	useEffect(() => {
 		if (result) {
@@ -64,7 +64,7 @@ export function App({rootPath}: AppProps) {
 	}, [exit, result]);
 
 	if (!result) {
-		return <LoadingView rootPath={rootPath} progress={progress} tick={tick} />;
+		return <LoadingView rootPaths={rootPaths} progress={progress} tick={tick} />;
 	}
 
 	if (!result.ok) {
@@ -82,14 +82,14 @@ export function App({rootPath}: AppProps) {
 		<Box flexDirection="column">
 			<Text color="green" bold>show-my-git-data</Text>
 			<Text>当前用户：<Text color="cyan">{formatGitUser(data.user)}</Text></Text>
-			<Text>扫描目录：<Text color="cyan">{data.rootPath}</Text></Text>
+			<RootPathsView rootPaths={data.rootPaths} />
 			<Text>
 				仓库：成功 {data.successfulRepositoryCount} / 共 {data.repositoryCount}
 				{data.failedRepositories.length > 0 && <Text color="yellow">，失败 {data.failedRepositories.length}</Text>}
 			</Text>
 			<Text> </Text>
 
-			{data.repositoryCount === 0 && <Text color="yellow">当前目录下未发现 Git 仓库。</Text>}
+			{data.repositoryCount === 0 && <Text color="yellow">扫描目录下未发现 Git 仓库。</Text>}
 
 			<ContributionHeatmap heatmap={data.heatmap} title={`${data.year} 年个人提交热力图`} />
 			<ContributionHeatmap heatmap={data.last12MonthsHeatmap} title="过去 12 个月个人提交热力图" />
@@ -110,14 +110,29 @@ export function App({rootPath}: AppProps) {
 	);
 }
 
-function LoadingView({rootPath, progress, tick}: {
-	rootPath: string;
+function RootPathsView({rootPaths}: {rootPaths: string[]}) {
+	if (rootPaths.length <= 1) {
+		return <Text>扫描目录：<Text color="cyan">{rootPaths[0] ?? process.cwd()}</Text></Text>;
+	}
+
+	return (
+		<Box flexDirection="column">
+			<Text>扫描目录：<Text color="cyan">{rootPaths.length} 个</Text></Text>
+			{rootPaths.map(rootPath => (
+				<Text key={rootPath} color="cyan">- {rootPath}</Text>
+			))}
+		</Box>
+	);
+}
+
+function LoadingView({rootPaths, progress, tick}: {
+	rootPaths: string[];
 	progress: ProgressSnapshot;
 	tick: number;
 }) {
 	if (progress.phase === 'analyzing') {
 		const currentRepository = progress.currentRepository
-			? path.relative(rootPath, progress.currentRepository) || path.basename(progress.currentRepository)
+			? formatProgressPath(progress.currentRepository, rootPaths, {emptyLabel: path.basename(progress.currentRepository)})
 			: '';
 		const percent = progress.totalRepositories === 0
 			? 100
@@ -138,7 +153,7 @@ function LoadingView({rootPath, progress, tick}: {
 			<Text color="green" bold>show-my-git-data</Text>
 			<Text>正在扫描仓库… 已检查 {progress.scannedDirectories ?? 0} 个目录，发现 {progress.repositoryCount} 个仓库</Text>
 			<Text>{renderIndeterminateBar(tick)}</Text>
-			{progress.currentPath && <Text color="gray">{path.relative(rootPath, progress.currentPath) || '.'}</Text>}
+			{progress.currentPath && <Text color="gray">{formatProgressPath(progress.currentPath, rootPaths, {emptyLabel: '.'})}</Text>}
 		</Box>
 	);
 }
@@ -170,4 +185,22 @@ function formatGitUser(user: GitUserIdentity): string {
 	}
 
 	return user.name ?? user.email ?? '未配置';
+}
+
+function formatProgressPath(targetPath: string, rootPaths: string[], options: {emptyLabel: string}): string {
+	const rootPath = findContainingRootPath(targetPath, rootPaths);
+	if (!rootPath) {
+		return targetPath;
+	}
+
+	return path.relative(rootPath, targetPath) || options.emptyLabel;
+}
+
+function findContainingRootPath(targetPath: string, rootPaths: string[]): string | undefined {
+	return rootPaths
+		.filter(rootPath => {
+			const relativePath = path.relative(rootPath, targetPath);
+			return relativePath === '' || !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
+		})
+		.sort((first, second) => second.length - first.length)[0];
 }

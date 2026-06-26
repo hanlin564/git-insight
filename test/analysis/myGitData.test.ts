@@ -1,4 +1,4 @@
-import {mkdtemp, rm, writeFile} from 'node:fs/promises';
+import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -120,4 +120,65 @@ test('缺少 Git 全局用户时返回可读错误', async t => {
 
 	assert.equal(result.ok, false);
 	assert.match(result.ok ? '' : result.error, /未读取到 Git 全局用户名或邮箱/);
+});
+
+test('支持多个扫描目录并避免重复统计同一个仓库', async t => {
+	const rootPath = await mkdtemp(path.join(os.tmpdir(), 'show-my-git-data-multi-stats-'));
+	const globalConfigPath = path.join(rootPath, '.gitconfig');
+	const previousGlobalConfigPath = process.env.GIT_CONFIG_GLOBAL;
+	const previousNoSystem = process.env.GIT_CONFIG_NOSYSTEM;
+
+	t.after(async () => {
+		if (previousGlobalConfigPath === undefined) {
+			delete process.env.GIT_CONFIG_GLOBAL;
+		} else {
+			process.env.GIT_CONFIG_GLOBAL = previousGlobalConfigPath;
+		}
+
+		if (previousNoSystem === undefined) {
+			delete process.env.GIT_CONFIG_NOSYSTEM;
+		} else {
+			process.env.GIT_CONFIG_NOSYSTEM = previousNoSystem;
+		}
+
+		await rm(rootPath, {recursive: true, force: true});
+	});
+
+	process.env.GIT_CONFIG_GLOBAL = globalConfigPath;
+	process.env.GIT_CONFIG_NOSYSTEM = '1';
+	await writeFile(globalConfigPath, '[user]\n\tname = Alice\n\temail = alice@example.com\n', 'utf8');
+
+	const frontendPath = path.join(rootPath, 'frontend');
+	const backendPath = path.join(rootPath, 'backend');
+	await mkdir(frontendPath);
+	await mkdir(backendPath);
+	const frontendRepo = await createTempGitRepository(t, {parentDir: frontendPath, namePrefix: 'repo-web-'});
+	const backendRepo = await createTempGitRepository(t, {parentDir: backendPath, namePrefix: 'repo-api-'});
+
+	await frontendRepo.commitFile({
+		date: '2025-04-30',
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com',
+		filePath: 'frontend.txt',
+		content: 'a\nb\n'
+	});
+	await backendRepo.commitFile({
+		date: '2025-04-30',
+		authorName: 'Alice',
+		authorEmail: 'alice@example.com',
+		filePath: 'backend.txt',
+		content: 'a\n'
+	});
+
+	const result = await collectMyGitData([frontendPath, backendPath, frontendPath], undefined, new Date('2025-04-30T12:00:00'));
+
+	assert.equal(result.ok, true);
+	if (!result.ok) {
+		return;
+	}
+
+	assert.deepEqual(result.data.rootPaths, [frontendPath, backendPath]);
+	assert.equal(result.data.repositoryCount, 2);
+	assert.equal(result.data.summaries.today.commitCount, 2);
+	assert.equal(result.data.summaries.today.changedLines, 3);
 });

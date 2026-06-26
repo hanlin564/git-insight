@@ -19,18 +19,30 @@ const SKIPPED_DIRECTORIES = new Set([
 ]);
 
 export async function discoverGitRepositories(
-	rootPath: string,
+	rootPaths: string | string[],
 	onProgress?: (progress: RepositoryDiscoveryProgress) => void
 ): Promise<string[]> {
 	const repositories: string[] = [];
+	const seenRepositories = new Set<string>();
 	const state = {scannedDirectories: 0};
-	await walk(path.resolve(rootPath), repositories, state, onProgress);
+	const resolvedRootPaths = normalizeRootPaths(rootPaths);
+
+	for (const rootPath of resolvedRootPaths) {
+		await walk(rootPath, repositories, seenRepositories, state, onProgress);
+	}
+
 	return repositories;
+}
+
+function normalizeRootPaths(rootPaths: string | string[]): string[] {
+	const paths = Array.isArray(rootPaths) ? rootPaths : [rootPaths];
+	return [...new Set(paths.map(rootPath => path.resolve(rootPath)))];
 }
 
 async function walk(
 	directoryPath: string,
 	repositories: string[],
+	seenRepositories: Set<string>,
 	state: {scannedDirectories: number},
 	onProgress?: (progress: RepositoryDiscoveryProgress) => void
 ): Promise<void> {
@@ -50,7 +62,11 @@ async function walk(
 	}
 
 	if (entries.some(entry => entry.name === '.git' && (entry.isDirectory() || entry.isFile()))) {
-		repositories.push(directoryPath);
+		if (!seenRepositories.has(directoryPath)) {
+			seenRepositories.add(directoryPath);
+			repositories.push(directoryPath);
+		}
+
 		onProgress?.({
 			phase: 'scanning',
 			scannedDirectories: state.scannedDirectories,
@@ -65,7 +81,7 @@ async function walk(
 			continue;
 		}
 
-		await walk(path.join(directoryPath, entry.name), repositories, state, onProgress);
+		await walk(path.join(directoryPath, entry.name), repositories, seenRepositories, state, onProgress);
 	}
 }
 
